@@ -5,7 +5,7 @@ import type { Standalone } from "../ast/node/statement";
 import type { Logger } from "../diagnostic/logger";
 import { Assignment } from "../ast/tree/statement/assignment";
 import { Location } from "../diagnostic/location";
-import { Value } from "../ast/node/value";
+import { Value, type Dict } from "../ast/node/value";
 import { ComponentString, StringComponent } from "../ast/node/string";
 import type { Dependent, ExpressionParent } from "../ast/node/expression";
 import { Lexer } from "../lexer/lexer";
@@ -376,28 +376,30 @@ export class Parser {
     private parsePrimaryExpression(parent: ExpressionParent | null): Dependent<any> {
         let expression = this.parseOneExpression(parent);
 
-        switch (this.stream.peek().type) {
-            case "Period": {
-                this.stream.consume();
-                const name = this.stream.consume().expect("Identifier", "Expected member name, found '{1}'");
-                const expr = new ValueExpression(new Value.Identifier(name.raw), null);
-                const oldExpr = expression;
-                expression = new Arithmetic(expression, expr, operators.Period!, null);
-                oldExpr.parent = expression;
-                expr.parent = expression;
-                break;
+        let peekToken;
+        while ((peekToken = this.stream.peek().type) === "Period" || peekToken === "OpenBracket")
+            switch (peekToken) {
+                case "Period": {
+                    this.stream.consume();
+                    const name = this.stream.consume().expect("Identifier", "Expected member name, found '{1}'");
+                    const expr = new ValueExpression(new Value.Literal(name.raw), null);
+                    const oldExpr = expression;
+                    expression = new Arithmetic(expression, expr, operators.Period!, null);
+                    oldExpr.parent = expression;
+                    expr.parent = expression;
+                    break;
+                }
+                case "OpenBracket": {
+                    this.stream.consume();
+                    const expr = this.parseExpression(null);
+                    this.stream.consume().expect("CloseBracket", "Expected closing bracket, found '{1}'");
+                    const oldRhs = expression;
+                    expression = new Arithmetic(expression, expr, operators.Period!, null);
+                    oldRhs.parent = expression;
+                    expr.parent = expression;
+                    break;
+                }
             }
-            case "OpenBracket": {
-                this.stream.consume();
-                const expr = this.parseExpression(null);
-                this.stream.consume().expect("CloseBracket", "Expected closing bracket, found '{1}'");
-                const oldRhs = expression;
-                expression = new Arithmetic(expression, expr, operators.Period!, null);
-                oldRhs.parent = expression;
-                expr.parent = expression;
-                break;
-            }
-        }
 
         return expression;
     }
@@ -412,7 +414,7 @@ export class Parser {
             return expr;
         }
 
-        if (this.stream.peek().type === "Identifier" && this.stream.peek(1).type === "OpenParen")
+        if (token.type === "Identifier" && this.stream.peek(1).type === "OpenParen")
             return this.parseFunctionCall(parent);
 
         const value = this.parseValue(null);
@@ -491,6 +493,7 @@ export class Parser {
 
     private parseValue(parent: ExpressionParent | null): Value<any> {
         const token = this.stream.peek();
+        const next = this.stream.peek(1);
 
         switch (token.type) {
             case "Number":
@@ -518,13 +521,41 @@ export class Parser {
                 return expr;
             }
             case "OpenBrace": {
-                return new Value.Lambda(this.parseLambda(parent!));
+                if ((next.type === "Identifier" && this.stream.peek(2).type === "Colon") || next.type === "CloseBrace") {
+                    const dict = this.parseDictionary(parent);
+                    const expr = new Value.Dictionary(dict);
+
+                    for (const value of Object.values(dict))
+                        value.parent = expr;
+
+                    return expr;
+                } else return new Value.Lambda(this.parseLambda(parent!));
             }
             default: {
                 this.logger.error(`Expected a value, found '${token.asString()}'`, this.location());
                 throw new ParseError();
             }
         }
+    }
+
+    private parseDictionary(parent: ExpressionParent | null): Dict<Dependent<any>> {
+        const dict: Dict<any> = {};
+        this.stream.consume().expect("OpenBrace");
+
+        while (this.stream.peek().type !== "CloseBrace") {
+            const name = this.stream.consume().expect("Identifier", "Expected key, found '{1}'");
+            this.stream.consume().expect("Colon");
+            const value = this.parseExpression(null);
+
+            if (this.stream.peek().type !== "CloseBrace")
+                this.stream.consume().expect("Comma");
+
+            dict[name.raw] = value;
+        }
+
+        this.stream.consume().expect("CloseBrace");
+
+        return dict;
     }
 
     private parseArray(): Dependent<any>[] {

@@ -9,7 +9,7 @@ import { ExecutionPass } from "./pass/execution";
 import { PassManager } from "./pass/manager";
 import { registerFunctions } from "./environment";
 
-const input = readFileSync(join(__dirname, "../test/arrays.mini"), "utf8");
+const input = readFileSync(join(__dirname, "../test/dicts.mini"), "utf8");
 const lexer = new Lexer(input);
 const logger = new Logger();
 const lexResult = lexer.lex(logger);
