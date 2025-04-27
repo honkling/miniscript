@@ -1,0 +1,16 @@
+numbers = []
+
+repeat(5) {
+    numbers += it
+}
+
+func sum(input: number[]) -> number {
+    value = 0
+
+    foreach (v : input)
+        value += v
+
+    return value
+}
+
+print(sum(numbers))

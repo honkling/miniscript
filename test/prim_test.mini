@@ -1,0 +1,12 @@
+a = 123
+b = 12.345
+c = a + b
+
+yes = true
+no = false
+
+print("A: " + a)
+print("B: $b")
+print("C: ${c + 1}")
+print(yes)
+print(no)

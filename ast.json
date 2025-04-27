@@ -1,0 +1,170 @@
+{
+  "parent": null,
+  "statements": [
+    {
+      "parent": null,
+      "name": "numbers",
+      "expression": {
+        "parent": null,
+        "value": {
+          "parent": null,
+          "value": [],
+          "objType": "Array"
+        },
+        "objType": "ValueExpression"
+      },
+      "token": {
+        "type": "Assign",
+        "raw": "=",
+        "location": {
+          "index": 8,
+          "line": 1,
+          "column": 9,
+          "objType": "Location"
+        },
+        "value": null,
+        "objType": "Token"
+      },
+      "objType": "Assignment"
+    },
+    {
+      "parent": null,
+      "name": "repeat",
+      "args": [
+        {
+          "parent": null,
+          "value": {
+            "parent": null,
+            "value": 0,
+            "objType": "Number"
+          },
+          "objType": "ValueExpression"
+        }
+      ],
+      "lambda": {
+        "parent": null,
+        "parameters": [],
+        "block": {
+          "parent": null,
+          "statements": [
+            {
+              "parent": null,
+              "name": "numbers",
+              "expression": {
+                "parent": null,
+                "value": {
+                  "parent": null,
+                  "value": null,
+                  "objType": "Identifier"
+                },
+                "objType": "ValueExpression"
+              },
+              "token": {
+                "type": "PlusAssign",
+                "raw": "+=",
+                "location": {
+                  "index": 38,
+                  "line": 4,
+                  "column": 13,
+                  "objType": "Location"
+                },
+                "value": null,
+                "objType": "Token"
+              },
+              "objType": "Assignment"
+            }
+          ],
+          "symbolTable": {
+            "objType": "SymbolTable"
+          },
+          "objType": "Block"
+        },
+        "objType": "Lambda"
+      },
+      "objType": "FunctionCall"
+    },
+    {
+      "parent": null,
+      "func": {
+        "parent": null,
+        "name": "sum",
+        "lambda": {
+          "parent": null,
+          "parameters": [],
+          "block": {
+            "parent": null,
+            "statements": [
+              {
+                "parent": null,
+                "name": "value",
+                "expression": {
+                  "parent": null,
+                  "value": {
+                    "parent": null,
+                    "value": 0,
+                    "objType": "Number"
+                  },
+                  "objType": "ValueExpression"
+                },
+                "token": {
+                  "type": "Assign",
+                  "raw": "=",
+                  "location": {
+                    "index": 95,
+                    "line": 8,
+                    "column": 11,
+                    "objType": "Location"
+                  },
+                  "value": null,
+                  "objType": "Token"
+                },
+                "objType": "Assignment"
+              }
+            ],
+            "symbolTable": {
+              "objType": "SymbolTable"
+            },
+            "objType": "Block"
+          },
+          "objType": "Lambda"
+        },
+        "returnType": {
+          "parent": null,
+          "isArray": false,
+          "objType": "Number"
+        },
+        "objType": "Function"
+      },
+      "objType": "FunctionDeclaration"
+    },
+    {
+      "parent": null,
+      "name": "print",
+      "args": [
+        {
+          "parent": null,
+          "name": "sum",
+          "args": [
+            {
+              "parent": null,
+              "value": {
+                "parent": null,
+                "value": null,
+                "objType": "Identifier"
+              },
+              "objType": "ValueExpression"
+            }
+          ],
+          "lambda": null,
+          "objType": "FunctionCall"
+        }
+      ],
+      "lambda": null,
+      "objType": "FunctionCall"
+    }
+  ],
+  "symbolTable": {
+    "objType": "SymbolTable"
+  },
+  "objType": "Block"
+}
