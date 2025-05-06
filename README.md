@@ -1,9 +1,11 @@
 # MiniScript
 
+> [!WARNING]
+> MiniScript is currently extremely experimental. Behavior may change at any time,
+> features may be added or removed at any time. Expect no consistency.
+
 MiniScript is a scripting language written in Kotlin. It's primarily built for Minecraft, so it can be used to rapidly develop servers.
 However, MiniScript does remain platform agnostic and is not necessarily locked to running on Minecraft.
-
-It is currently extremely experimental. Behavior may change at any time, features may be added or removed at any time. Expect no consistency.
 
 There currently isn't any language documentation available, but you can view the [test scripts](https://github.com/honkling/miniscript/tree/develop/src/test/resources) I'm using in development.
 
@@ -19,10 +21,11 @@ Feel free to suggest new features in the [Issues](https://github.com/honkling/mi
 - [x] Primitives, arrays, dictionaries
 - [x] If statements
 - [x] Arithmetic
+- [ ] Ternary expressions
 - [ ] Classes/structs
-- [ ] Persistent data storage
 - [ ] Core standard library
   - [ ] Networking (http, tcp, ws)
+  - [ ] Persistent data storage
   - [ ] Files
   - [ ] Locale (time/date, language)
   - [ ] Primitive utilities
