@@ -26,6 +26,7 @@ Feel free to suggest new features in the [Issues](https://github.com/honkling/mi
 - [ ] Core standard library
   - [ ] Networking (http, tcp, ws)
   - [ ] Persistent data storage
+  - [ ] Reflection
   - [ ] Files
   - [ ] Locale (time/date, language)
   - [ ] Primitive utilities
