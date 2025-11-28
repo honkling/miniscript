@@ -18,26 +18,31 @@ class Arithmetic(
     parent: Node<*>?
 ) : Expression<Any?>(parent), Assignable {
     override fun get(): Any? {
+        return getWithLeftSide().second
+    }
+
+    fun getWithLeftSide(): Pair<Any, Any?> {
         val block = getBlockParent() ?: throw MiniScriptException.RuntimeError("Couldn't find block")
-        val left = this.left.get() ?: throw MiniScriptException.RuntimeError("Expected value")
+        val left = this.left.get()
+            ?: throw MiniScriptException.RuntimeError("Expected value")
 
         if (operator == Operator.And) {
             if (left !is Boolean)
                 throw MiniScriptException.RuntimeError("Expected boolean for AND comparison")
 
             if (left == false)
-                return false
+                return left to false
         } else if (operator == Operator.Or) {
             if (left !is Boolean)
                 throw MiniScriptException.RuntimeError("Expected boolean for OR comparison")
 
             if (left == true)
-                return true
+                return left to true
         }
 
         val right = this.right.get() ?: throw MiniScriptException.RuntimeError("Expected value")
 
-        return evaluateArithmetic(block.miniScript, left, right, operator)
+        return left to evaluateArithmetic(block.miniScript, left, right, operator)
     }
 
     override fun canAssign(): Boolean {
@@ -75,7 +80,7 @@ fun evaluateArithmetic(miniScript: MiniScript, left: Any?, right: Any?, operator
     return changer.block(left, right, operator)
 }
 
-fun tryGetChanger(miniScript: MiniScript, leftClass: KClass<*>, rightClass: KClass<*>, op: Operator, tryVariant: Boolean = true): Changer<*, *, *>? {
+fun tryGetChanger(miniScript: MiniScript, leftClass: KClass<*>, rightClass: KClass<*>, op: Operator, tryVariant: Boolean = true): Changer<*>? {
     val changers = miniScript.changers
 
     changers[leftClass]?.get(rightClass)
@@ -85,7 +90,9 @@ fun tryGetChanger(miniScript: MiniScript, leftClass: KClass<*>, rightClass: KCla
     if (tryVariant)
         return tryGetChanger(miniScript, rightClass, leftClass, op, false)
             ?: tryGetChanger(miniScript, Any::class, rightClass, op, false)
+            ?: tryGetChanger(miniScript, rightClass, Any::class, op, false)
             ?: tryGetChanger(miniScript, leftClass, Any::class, op, false)
+            ?: tryGetChanger(miniScript, Any::class, leftClass, op, false)
             ?: tryGetChanger(miniScript, Any::class, Any::class, op, false)
 
     return null

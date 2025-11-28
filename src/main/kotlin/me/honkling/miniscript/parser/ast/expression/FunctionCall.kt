@@ -4,6 +4,7 @@ import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.parser.ast.Node
 import me.honkling.miniscript.parser.ast.Type
 import me.honkling.miniscript.parser.ast.function.Function
+import me.honkling.miniscript.parser.ast.prototype.Class
 import me.honkling.miniscript.pass.Pass
 import kotlin.collections.plus
 
@@ -14,11 +15,31 @@ class FunctionCall(
     parent: Node<*>?
 ) : Expression<Any?>(parent) {
     override fun get(): Any? {
-        val function = reference.get()
+        val result = (reference as? Arithmetic)?.getWithLeftSide() ?: reference.get()
         val arguments = mutableListOf<Any>()
 
-        if (function !is Function)
+        if (result is Class) {
+            val instance = mutableMapOf<Any?, Any?>()
+
+            for (method in result.methods)
+                instance[method.name!!] = method
+
+            for (field in result.fields)
+                field.value?.let { instance[field.name] = it.get() }
+
+            return instance
+        }
+
+        if ((result !is Pair<*, *> || result.second !is Function) && result !is Function)
             throw MiniScriptException.RuntimeError("Expected a function")
+
+        val function = (result as? Pair<Any, Function>)?.second ?: result as Function
+
+        if (function.parameters.firstOrNull()?.name == "this") {
+            // This function belongs to a class.
+            val instance = (result as Pair<Any, Function>).first
+            arguments += instance
+        }
 
         for (argument in this.arguments)
             arguments += argument.get()

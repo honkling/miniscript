@@ -2,6 +2,7 @@ package me.honkling.miniscript.parser.ast.statement
 
 import me.honkling.miniscript.parser.ast.Block
 import me.honkling.miniscript.parser.ast.expression.Expression
+import me.honkling.miniscript.parser.ast.function.Function
 import me.honkling.miniscript.pass.Pass
 
 class Return(
@@ -9,7 +10,7 @@ class Return(
     parent: Block
 ) : Statement(parent) {
     override fun execute(): ExecutionResult {
-        parent.returnValue = expression.get()
+        getParent<Function>(Function::class).block!!.returnValue = expression.get()
         return ExecutionResult.Return
     }
 

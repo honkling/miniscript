@@ -9,10 +9,6 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-
-}
-
 kotlin {
     jvmToolchain(21)
 }

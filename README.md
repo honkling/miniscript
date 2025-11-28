@@ -22,7 +22,7 @@ Feel free to suggest new features in the [Issues](https://github.com/honkling/mi
 - [x] If statements
 - [x] Arithmetic
 - [ ] Ternary expressions
-- [ ] Classes/structs
+- [x] Classes
 - [ ] Core standard library
   - [ ] Networking (http, tcp, ws)
   - [ ] Persistent data storage

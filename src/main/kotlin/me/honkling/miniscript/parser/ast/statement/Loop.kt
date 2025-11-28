@@ -19,8 +19,10 @@ abstract class Loop(val block: Block, parent: Block) : Statement(parent) {
                 throw MiniScriptException.RuntimeError("Expected an iterable value")
 
             for (value in values) {
-                block.symbolTable[identifier] = value
-                val result = block.execute()
+                val frame = block.pushToStack()
+                frame.symbolTable[identifier] = value
+                val result = block.execute(false)
+                block.popFromStack()
 
                 when (result) {
                     ExecutionResult.Return -> return result

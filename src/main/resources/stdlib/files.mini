@@ -1,0 +1,3 @@
+fileSystem = (class {
+    native func readText(path: string): string
+})()

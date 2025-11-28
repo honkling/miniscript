@@ -1,1 +1,8 @@
-native func repeat(count: number, block: (number) -> void)
+func repeat(count: number, block: (number) -> void) {
+    i = 0
+
+    while (i < count) {
+        block(i)
+        i++
+    }
+}

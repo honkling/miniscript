@@ -1,0 +1,9 @@
+func fib(n: number) -> number {
+    if (n < 2) return n
+    return fib(n - 1) + fib(n - 2)
+}
+
+before = clock()
+print(fib(40))
+after = clock()
+print((after - before) / 1000 + " seconds")

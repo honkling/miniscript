@@ -9,7 +9,7 @@ abstract class Type<T> : Node<Nothing?>(null) {
     object Number : Type<kotlin.Number>()
     object Boolean : Type<kotlin.Boolean>()
     class Array<T>(val innerType: Type<T>) : Type<kotlin.Array<Any>>()
-    object Dictionary : Type<HashMap<String, Any>>()
+    object Dictionary : Type<HashMap<Any?, Any?>>()
     object Void : Type<Nothing?>()
     object Any : Type<Any>()
     class Function(

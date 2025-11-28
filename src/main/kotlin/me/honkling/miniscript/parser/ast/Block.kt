@@ -3,19 +3,20 @@ package me.honkling.miniscript.parser.ast
 import me.honkling.miniscript.MiniScript
 import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.parser.ast.expression.Expression
+import me.honkling.miniscript.parser.ast.stack.Frame
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 import me.honkling.miniscript.parser.ast.statement.Statement
 import me.honkling.miniscript.pass.Pass
 
-class Block(
+open class Block(
     val miniScript: MiniScript,
     val statements: MutableList<Node<*>>,
-    parent: Node<*>?
+    parent: Node<*>?,
 ) : Node<Node<*>?>(parent) {
-    val symbolTable = SymbolTable()
     var returnValue: Any? = null
 
-    fun execute(): ExecutionResult {
+    fun execute(pushStack: Boolean = true): ExecutionResult {
+        if (pushStack) pushToStack()
         returnValue = null
 
         for (statement in statements) {
@@ -24,14 +25,27 @@ class Block(
                 is Statement -> {
                     val result = statement.execute()
 
-                    if (result != ExecutionResult.ContinueExecution)
+                    if (result != ExecutionResult.ContinueExecution) {
+                        if (pushStack) popFromStack()
                         return result
+                    }
                 }
                 else -> throw MiniScriptException.RuntimeError("Expected a statement or expression in block")
             }
         }
 
+        if (pushStack) popFromStack()
         return ExecutionResult.ContinueExecution
+    }
+
+    fun pushToStack(): Frame {
+        val frame = Frame()
+        miniScript.environment.executionStack += frame
+        return frame
+    }
+
+    fun popFromStack() {
+        miniScript.environment.executionStack.removeLast()
     }
 
     override fun accept(pass: Pass) {
@@ -40,3 +54,7 @@ class Block(
 }
 
 class SymbolTable : HashMap<String, Any?>()
+
+interface SymbolHolder {
+    val symbolTable: SymbolTable
+}

@@ -11,54 +11,55 @@ import me.honkling.miniscript.parser.ast.Block
 import me.honkling.miniscript.parser.ast.Operator
 import me.honkling.miniscript.parser.ast.SymbolTable
 import me.honkling.miniscript.parser.ast.expression.Expression
+import me.honkling.miniscript.parser.ast.stack.Environment
 import me.honkling.miniscript.parser.ast.statement.Statement
 import me.honkling.miniscript.pass.Execution
 import me.honkling.miniscript.pass.PassManager
 import me.honkling.miniscript.stdlib.registerChangers
+import me.honkling.miniscript.stdlib.registerStdlibLocale
 import me.honkling.miniscript.stdlib.registerStdlibLogging
 import me.honkling.miniscript.stdlib.registerStdlibLoops
 import java.io.File
 import kotlin.reflect.KClass
 
 typealias ChangerBlock<F, S, R> = (lhs: F, rhs: S, op: Operator) -> R
-data class Changer<F, S, R>(
+data class Changer<R>(
     val validOperators: Set<Operator>,
     val block: ChangerBlock<Any?, Any?, R>
 )
 
-class MiniScript internal constructor(
-    val hasStandardLibrary: Boolean
-) {
-    val environment = Block(this, mutableListOf(), null)
-    val changers = mutableMapOf<KClass<*>, MutableMap<KClass<*>, MutableList<Changer<*, *, *>>>>()
+class MiniScript internal constructor(configurator: MiniScriptConfigurator) {
+    val hasStandardLibrary = configurator.hasStandardLibrary
+    val environment = Environment(this)
+    val changers = mutableMapOf<KClass<*>, MutableMap<KClass<*>, MutableList<Changer<*>>>>()
 
     init {
         registerChangers(this)
 
         if (hasStandardLibrary) {
+            evaluateResource("stdlib/files.mini")
             evaluateResource("stdlib/logging.mini", ::registerStdlibLogging)
             evaluateResource("stdlib/loops.mini", ::registerStdlibLoops)
+            evaluateResource("stdlib/locale.mini", ::registerStdlibLocale)
         }
     }
 
     inline fun <reified F, reified S, reified R> registerChanger(
         vararg validOperators: Operator,
-        noinline block: ChangerBlock<F, S, R>
+        noinline block: ChangerBlock<Any?, Any?, R>
     ) {
         val first = changers.getOrPut(F::class, ::mutableMapOf)
         val second = first.getOrPut(S::class, ::mutableListOf)
-        second += Changer<F, S, R>(validOperators.toSet()) { lhs, rhs, op ->
-            block(lhs as F, rhs as S, op)
-        }
+        second += Changer<R>(validOperators.toSet(), block)
     }
 
-    private fun evaluateResource(name: String, registrar: (MiniScript, SymbolTable) -> Unit) {
+    protected fun evaluateResource(name: String, registrar: (MiniScript, SymbolTable) -> Unit = { _, _ -> }) {
         val resource = MiniScript::class.java.getResource("/$name")?.toURI()
             ?: throw IllegalStateException("Couldn't find resource '$name'")
 
         val file = File(resource)
         evaluateInternal(file, true)
-        registrar(this, environment.symbolTable)
+        registrar(this, environment.lastFrame.symbolTable)
     }
 
     private fun evaluateInternal(file: File, internalMode: Boolean) {
@@ -88,20 +89,18 @@ class MiniScript internal constructor(
         if (diagnosticSize > 0)
             return
 
-        if (internalMode) {
-            environment.statements.clear()
-            environment.statements += block.statements
-            block.statements.forEach {
-                if (it is Statement)
-                    it.parent = environment
-                else if (it is Expression<*>)
-                    it.parent = environment
-            }
-        }
+//        if (internalMode) {
+//            environment.statements.clear()
+//            environment.statements += block.statements
+//            block.statements.forEach {
+//                if (it is Statement)
+//                    it.parent = environment
+//                else if (it is Expression<*>)
+//                    it.parent = environment
+//            }
+//        }
 
-        val passManager = PassManager()
-        passManager.register(Execution())
-        passManager.accept(if (internalMode) environment else block)
+        block.execute(!internalMode)
     }
 
     fun evaluate(file: File) {
@@ -109,6 +108,12 @@ class MiniScript internal constructor(
     }
 }
 
-fun miniScript(): MiniScript {
-    return MiniScript(true)
+class MiniScriptConfigurator {
+    var hasStandardLibrary = true
+}
+
+fun miniScript(block: MiniScriptConfigurator.() -> Unit = {}): MiniScript {
+    val configurator = MiniScriptConfigurator()
+    block(configurator)
+    return MiniScript(configurator)
 }

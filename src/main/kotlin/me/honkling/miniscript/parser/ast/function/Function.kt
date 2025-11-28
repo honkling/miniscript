@@ -8,7 +8,8 @@ import me.honkling.miniscript.pass.Pass
 import kotlin.collections.set
 
 class Function(
-    val parameters: List<Parameter>,
+    val name: String?,
+    val parameters: MutableList<Parameter>,
     val returnType: Type<*>?,
     var block: Block?,
     val isLambda: Boolean,
@@ -22,21 +23,33 @@ class Function(
             throw MiniScriptException.RuntimeError("Expected $parameterSize $form, found $argumentSize")
         }
 
+        val frame = block!!.pushToStack()
+        val oldArguments = mutableListOf<Any?>()
+
         if (isLambda && parameters.isEmpty() && arguments.isNotEmpty())
-            block!!.symbolTable["it"] = arguments[0]
+            frame.symbolTable["it"] = arguments[0]
         else for ((index, argument) in arguments.withIndex()) {
             val parameter = parameters[index]
-            block!!.symbolTable[parameter.name!!] = argument
+            val oldValue = frame.symbolTable[parameter.name!!]
+            frame.symbolTable[parameter.name] = argument
+            oldArguments += oldValue
         }
 
         if (lambda != null) {
             val blockArgument = parameters.lastOrNull { it.type is Type.Function }
                 ?: throw MiniScriptException.RuntimeError("Passed block to function without a block parameter")
 
-            block!!.symbolTable[blockArgument.name!!] = lambda
+            frame.symbolTable[blockArgument.name!!] = lambda
         }
 
-        block!!.execute()
+        block!!.execute(false)
+
+//        for ((index, argument) in oldArguments.withIndex()) {
+//            val parameter = parameters[index]
+//            frame.symbolTable[parameter.name!!] = argument
+//        }
+
+        block!!.popFromStack()
         return block!!.returnValue
     }
 

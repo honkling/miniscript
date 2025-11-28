@@ -1,0 +1,11 @@
+class Test {
+    a: number
+
+    func test() -> number {
+        return this.a
+    }
+}
+
+ins = Test()
+ins.a = 10
+print(ins.test())
