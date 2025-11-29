@@ -23,6 +23,7 @@ Feel free to suggest new features in the [Issues](https://github.com/honkling/mi
 - [x] Arithmetic
 - [ ] Ternary expressions
 - [x] Classes
+  - [ ] Constructors
 - [ ] Core standard library
   - [ ] Networking (http, tcp, ws)
   - [ ] Persistent data storage
