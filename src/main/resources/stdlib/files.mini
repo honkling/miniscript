@@ -1,3 +1,29 @@
-fileSystem = (class {
-    native func readText(path: string): string
-})()
+class File(path: string) {
+
+}
+
+func file(...paths: string) -> File {
+    joined_path = join_paths(...paths)
+    return File(joined_path)
+}
+
+func join_paths(...paths: string) -> string {
+    segments = []
+
+    foreach (path : paths) {
+        current_segments = path.replace("\\", "/")
+            .split("/")
+
+        foreach (segment : current_segments) {
+            if (segment == "..") {
+                segments.pop()
+                continue
+            }
+
+            segments += segment
+        }
+    }
+
+    return segments.join("/")
+}
+

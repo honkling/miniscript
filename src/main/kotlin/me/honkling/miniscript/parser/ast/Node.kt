@@ -28,18 +28,21 @@ abstract class Node<T>(
     }
 
     fun setSymbol(name: String, value: Any?) {
-        if (!setSymbolInternal(name, value)) {
-            val miniScript = getBlockParent()!!.miniScript
+        val miniScript = getBlockParent()!!.miniScript
+        val executionStack = miniScript.environment.executionStack
+        var foundSymbol = false
+
+        for (index in executionStack.size - 1 downTo 0) {
+            val frame = executionStack[index]
+
+            if (name in frame.symbolTable) {
+                frame.symbolTable[name] = value
+                foundSymbol = true
+                break
+            }
+        }
+
+        if (!foundSymbol)
             miniScript.environment.lastFrame.symbolTable[name] = value
-        }
-    }
-
-    private fun setSymbolInternal(name: String, value: Any?): Boolean {
-        if (this is SymbolHolder && name in symbolTable) {
-            symbolTable[name] = value
-            return true
-        }
-
-        return (parent as Node<*>?)?.setSymbolInternal(name, value) == true
     }
 }

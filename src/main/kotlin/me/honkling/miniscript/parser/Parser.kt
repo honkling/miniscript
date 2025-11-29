@@ -343,9 +343,14 @@ class Parser(
         stream.consume().expect(TokenType.OpenParen)
 
         while (stream.peek().type != TokenType.CloseParen) {
+            val isVararg = if (stream.peek().type == TokenType.Spread) {
+                stream.consume().expect(TokenType.Spread, "Expected '...', found {1}")
+                true
+            } else false
+
             val name = stream.consume().expect(TokenType.Identifier, "Expected a parameter name or ')', found {1}")
             stream.consume().expect(TokenType.Colon)
-            val type = parseType()
+            val type = Type.Array(parseType())
             val defaultValue = if (stream.peek().type == TokenType.Assign) {
                 stream.consume()
                 parseExpression(null)
@@ -354,7 +359,7 @@ class Parser(
             if (stream.peek().type != TokenType.CloseParen)
                 stream.consume().expect(TokenType.Comma, "Expected ',' or ')', found {1}")
 
-            val parameter = Parameter(name.raw, type, defaultValue, null)
+            val parameter = Parameter(name.raw, type, defaultValue, isVararg, null)
             (defaultValue as Node<Node<*>?>?)?.parent = parameter
             parameters += parameter
         }
@@ -469,6 +474,10 @@ class Parser(
         val parameters = mutableListOf<Parameter>()
         if (hasParameters) {
             while (stream.peek().type != TokenType.Arrow) {
+                val isVararg = if (stream.peek().type == TokenType.Spread) {
+                    stream.consume().expect(TokenType.Spread, "Expected '...', found {1}")
+                    true
+                } else false
                 val name = stream.consume().expect(TokenType.Identifier, "Expected a parameter name, '}', or '->'. Found {1}")
                 val type = if (stream.peek().type == TokenType.Colon) {
                     stream.consume()
@@ -480,7 +489,7 @@ class Parser(
                     parseExpression(null)
                 } else null
 
-                val parameter = Parameter(name.raw, type, defaultValue, null)
+                val parameter = Parameter(name.raw, type, defaultValue, isVararg, null)
                 defaultValue?.parent = parameter
                 parameters += parameter
 
@@ -613,6 +622,10 @@ class Parser(
                 val parameters = mutableListOf<Parameter>()
 
                 while (stream.peek().type != TokenType.CloseParen) {
+                    val isVararg = if (stream.peek().type == TokenType.Spread) {
+                        stream.consume().expect(TokenType.Spread, "Expected '...', found {1}")
+                        true
+                    } else false
                     val name = if (stream.peek().type == TokenType.Identifier) {
                         val name = stream.consume()
                         stream.consume().expect(TokenType.Colon)
@@ -632,7 +645,7 @@ class Parser(
                         isFunction = true
                     }
 
-                    val parameter = Parameter(name?.raw, type, defaultValue, null)
+                    val parameter = Parameter(name?.raw, type, defaultValue, isVararg, null)
                     (defaultValue as Node<Node<*>?>?)?.parent = parameter
                     parameters += parameter
                 }

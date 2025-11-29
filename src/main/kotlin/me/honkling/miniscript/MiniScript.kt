@@ -7,14 +7,9 @@ import me.honkling.miniscript.lexer.Lexer
 import me.honkling.miniscript.lexer.TokenStream
 import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.parser.Parser
-import me.honkling.miniscript.parser.ast.Block
 import me.honkling.miniscript.parser.ast.Operator
 import me.honkling.miniscript.parser.ast.SymbolTable
-import me.honkling.miniscript.parser.ast.expression.Expression
 import me.honkling.miniscript.parser.ast.stack.Environment
-import me.honkling.miniscript.parser.ast.statement.Statement
-import me.honkling.miniscript.pass.Execution
-import me.honkling.miniscript.pass.PassManager
 import me.honkling.miniscript.stdlib.registerChangers
 import me.honkling.miniscript.stdlib.registerStdlibLocale
 import me.honkling.miniscript.stdlib.registerStdlibLogging
@@ -28,8 +23,8 @@ data class Changer<R>(
     val block: ChangerBlock<Any?, Any?, R>
 )
 
-class MiniScript internal constructor(configurator: MiniScriptConfigurator) {
-    val hasStandardLibrary = configurator.hasStandardLibrary
+class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
+    val hasStandardLibrary = configuration.hasStandardLibrary
     val environment = Environment(this)
     val changers = mutableMapOf<KClass<*>, MutableMap<KClass<*>, MutableList<Changer<*>>>>()
 
@@ -37,7 +32,7 @@ class MiniScript internal constructor(configurator: MiniScriptConfigurator) {
         registerChangers(this)
 
         if (hasStandardLibrary) {
-            evaluateResource("stdlib/files.mini")
+//            evaluateResource("stdlib/files.mini")
             evaluateResource("stdlib/logging.mini", ::registerStdlibLogging)
             evaluateResource("stdlib/loops.mini", ::registerStdlibLoops)
             evaluateResource("stdlib/locale.mini", ::registerStdlibLocale)
@@ -108,12 +103,12 @@ class MiniScript internal constructor(configurator: MiniScriptConfigurator) {
     }
 }
 
-class MiniScriptConfigurator {
+class MiniScriptConfiguration {
     var hasStandardLibrary = true
 }
 
-fun miniScript(block: MiniScriptConfigurator.() -> Unit = {}): MiniScript {
-    val configurator = MiniScriptConfigurator()
+fun miniScript(block: MiniScriptConfiguration.() -> Unit = {}): MiniScript {
+    val configurator = MiniScriptConfiguration()
     block(configurator)
     return MiniScript(configurator)
 }

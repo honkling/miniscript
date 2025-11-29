@@ -77,6 +77,7 @@ enum class TokenType(val value: String? = null) {
     Boolean,
     String,
 
+    Spread("..."),
     OpenParen("("),
     CloseParen(")"),
     OpenBracket("["),

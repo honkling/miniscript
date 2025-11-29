@@ -15,7 +15,7 @@ class Class(
 ) : Prototype(name, fields, parent) {
     init {
         for (method in methods)
-            method.parameters.add(0, Parameter("this", Type.Dictionary, null, method))
+            method.parameters.add(0, Parameter("this", Type.Dictionary, null, false, method))
     }
 
     override fun accept(pass: Pass) {

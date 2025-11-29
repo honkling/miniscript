@@ -39,10 +39,10 @@ class Lexer(
         if (character.isWhitespace())
             return lexGreedyTokenByPredicate(TokenType.Whitespace, Char::isWhitespace)
 
-        if (character.isLetter()) {
+        if (character.isLetter() || character == '_') {
             val start = location.clone()
             val raw = lexGreedyStringByPredicate { char, index ->
-                (index == 0 && char.isLetter()) || char.isLetterOrDigit()
+                (index == 0 && char.isLetter()) || char.isLetterOrDigit() || char == '_'
             }
 
             val isTrue = raw == "true"

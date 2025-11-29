@@ -1,0 +1,10 @@
+func print_sum(message: string, ...numbers: number) {
+    sum = 0
+
+    foreach (num : numbers)
+        sum += num
+
+    print(message + " " + sum)
+}
+
+print_sum("Sum:", 1, 2, 3)

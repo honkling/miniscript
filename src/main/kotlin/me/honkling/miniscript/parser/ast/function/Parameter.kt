@@ -9,6 +9,7 @@ class Parameter(
     val name: String?,
     val type: Type<*>?,
     val defaultValue: Expression<*>?,
+    val isVararg: Boolean = false,
     parent: Node<*>?
 ) : Node<Node<*>?>(parent) {
     override fun accept(pass: Pass) {

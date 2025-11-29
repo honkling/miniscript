@@ -3,6 +3,7 @@ package me.honkling.miniscript.parser.ast.expression
 import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.parser.ast.Node
 import me.honkling.miniscript.parser.ast.Type
+import me.honkling.miniscript.parser.ast.Value
 import me.honkling.miniscript.parser.ast.function.Function
 import me.honkling.miniscript.parser.ast.prototype.Class
 import me.honkling.miniscript.pass.Pass
@@ -41,9 +42,18 @@ class FunctionCall(
             arguments += instance
         }
 
-        for (argument in this.arguments)
-            arguments += argument.get()
+        var index = 0
+
+        for (parameter in function.parameters) {
+            if (parameter.isVararg) {
+                val rest = this.arguments.slice(index..<this.arguments.size)
+                arguments += rest.map { it.get() }
+                break
+            }
+
+            arguments += this.arguments[index++].get()
                 ?: throw MiniScriptException.RuntimeError("Expected argument value, found nothing")
+        }
 
         return function.call(*arguments.toTypedArray(), lambda = lambda)
     }
