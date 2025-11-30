@@ -23,12 +23,12 @@ import me.honkling.miniscript.parser.ast.prototype.Class
 import me.honkling.miniscript.parser.ast.prototype.Field
 import me.honkling.miniscript.parser.ast.prototype.Prototype
 import me.honkling.miniscript.parser.ast.statement.Assignment
-import me.honkling.miniscript.parser.ast.statement.Break
-import me.honkling.miniscript.parser.ast.statement.Continue
+import me.honkling.miniscript.parser.ast.expression.Break
+import me.honkling.miniscript.parser.ast.expression.Continue
 import me.honkling.miniscript.parser.ast.statement.FunctionDeclaration
-import me.honkling.miniscript.parser.ast.statement.If
+import me.honkling.miniscript.parser.ast.expression.If
 import me.honkling.miniscript.parser.ast.statement.Loop
-import me.honkling.miniscript.parser.ast.statement.Return
+import me.honkling.miniscript.parser.ast.expression.Return
 import me.honkling.miniscript.parser.ast.string.ComplexString
 import me.honkling.miniscript.parser.ast.string.Component
 
@@ -77,20 +77,20 @@ class Parser(
             TokenType.Class -> parseClassDeclaration(parent)
             TokenType.Native, TokenType.Function -> parseFunctionDeclaration(parent)
             TokenType.Identifier -> parseIdentifierExecutable(parent)
+            TokenType.ForEach -> parseForEach(parent)
+            TokenType.While -> parseWhile(parent)
             TokenType.Return -> parseReturn(parent)
             TokenType.Continue -> parseContinue(parent)
             TokenType.Break -> parseBreak(parent)
-            TokenType.ForEach -> parseForEach(parent)
-            TokenType.While -> parseWhile(parent)
             TokenType.If -> parseIf(parent)
             else -> {
-                logger.error("Expected a statement, found ${token.asString()}")
-                throw MiniScriptException.ParseError()
+                val expression = parseExpression(parent)
+                return expression
             }
         }
     }
 
-    fun parseIf(parent: Block): If {
+    fun parseIf(parent: Node<*>?): If {
         stream.consume().expect(TokenType.If)
         stream.consume().expect(TokenType.OpenParen)
         val expression = parseExpression(null)
@@ -224,6 +224,10 @@ class Parser(
                 stream.consume().expect(TokenType.CloseParen)
                 expr
             }
+            TokenType.Return -> parseReturn(parent)
+            TokenType.Continue -> parseContinue(parent)
+            TokenType.Break -> parseBreak(parent)
+            TokenType.If -> parseIf(parent)
             else -> parseValue(parent)
         }
     }
@@ -324,7 +328,7 @@ class Parser(
             parseFunctionValue(null)
         } else null
 
-        val functionCall = FunctionCall(expression, arguments, function?.get(), parent)
+        val functionCall = FunctionCall(expression, arguments, function?.get()?.first, parent)
         arguments.forEach { it.parent = functionCall }
         expression.parent = functionCall
         function?.parent = functionCall
@@ -384,7 +388,7 @@ class Parser(
         return statement
     }
 
-    fun parseReturn(parent: Block): Return {
+    fun parseReturn(parent: Node<*>?): Return {
         stream.consume().expect(TokenType.Return)
         val expression = parseExpression(null)
         val statement = Return(expression, parent)
@@ -392,12 +396,12 @@ class Parser(
         return statement
     }
 
-    fun parseContinue(parent: Block): Continue {
+    fun parseContinue(parent: Node<*>?): Continue {
         stream.consume().expect(TokenType.Continue)
         return Continue(parent)
     }
 
-    fun parseBreak(parent: Block): Break {
+    fun parseBreak(parent: Node<*>?): Break {
         stream.consume().expect(TokenType.Break)
         return Break(parent)
     }

@@ -13,7 +13,7 @@ abstract class Loop(val block: Block, parent: Block) : Statement(parent) {
         parent: Block
     ) : Loop(block, parent) {
         override fun execute(): ExecutionResult {
-            val values = expression.get()
+            val values = expression.get().first
 
             if (values !is Iterable<*>)
                 throw MiniScriptException.RuntimeError("Expected an iterable value")
@@ -21,7 +21,7 @@ abstract class Loop(val block: Block, parent: Block) : Statement(parent) {
             for (value in values) {
                 val frame = block.pushToStack()
                 frame.symbolTable[identifier] = value
-                val result = block.execute(false)
+                val result = block.execute(false).second
                 block.popFromStack()
 
                 when (result) {
@@ -41,13 +41,13 @@ abstract class Loop(val block: Block, parent: Block) : Statement(parent) {
         parent: Block
     ) : Loop(block, parent) {
         override fun execute(): ExecutionResult {
-            var result = expression.get()
+            var result = expression.get().first
 
             if (result !is Boolean)
                 throw MiniScriptException.RuntimeError("Expected boolean for while statement")
 
             while (result == true) {
-                when (block.execute()) {
+                when (block.execute().second) {
                     ExecutionResult.Return -> {
                         return ExecutionResult.Return
                     }
@@ -55,7 +55,7 @@ abstract class Loop(val block: Block, parent: Block) : Statement(parent) {
                     else -> {}
                 }
 
-                result = expression.get()
+                result = expression.get().first
 
                 if (result !is Boolean)
                     throw MiniScriptException.RuntimeError("Expected boolean for while statement")

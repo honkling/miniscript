@@ -14,7 +14,7 @@ class Assignment(
     parent: Block
 ) : Statement(parent) {
     override fun execute(): ExecutionResult {
-        reference.set(operator, expression?.get())
+        reference.set(operator, expression?.get()?.first)
         return ExecutionResult.ContinueExecution
     }
 

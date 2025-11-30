@@ -13,13 +13,13 @@ import me.honkling.miniscript.parser.ast.prototype.Class
 import me.honkling.miniscript.parser.ast.prototype.Field
 import me.honkling.miniscript.parser.ast.stack.Environment
 import me.honkling.miniscript.parser.ast.statement.Assignment
-import me.honkling.miniscript.parser.ast.statement.Break
-import me.honkling.miniscript.parser.ast.statement.Continue
+import me.honkling.miniscript.parser.ast.expression.Break
+import me.honkling.miniscript.parser.ast.expression.Continue
 import me.honkling.miniscript.parser.ast.statement.FunctionDeclaration
-import me.honkling.miniscript.parser.ast.statement.If
+import me.honkling.miniscript.parser.ast.expression.If
 import me.honkling.miniscript.parser.ast.statement.Loop
 import me.honkling.miniscript.parser.ast.statement.Native
-import me.honkling.miniscript.parser.ast.statement.Return
+import me.honkling.miniscript.parser.ast.expression.Return
 
 abstract class Pass {
     open fun visit(node: Node<*>) {

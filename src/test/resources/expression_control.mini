@@ -1,0 +1,13 @@
+func test(a: number, b: boolean) -> number {
+    return if (b) {
+        print("B is true!")
+        0
+    } else if (a < 10) {
+        print("A is less than 10")
+        a + 1
+    } else a
+}
+
+print(test(1, true))
+print(test(1, false))
+print(test(10, false))

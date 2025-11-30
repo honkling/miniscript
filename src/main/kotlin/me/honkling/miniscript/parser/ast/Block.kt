@@ -15,19 +15,26 @@ open class Block(
 ) : Node<Node<*>?>(parent) {
     var returnValue: Any? = null
 
-    fun execute(pushStack: Boolean = true): ExecutionResult {
+    fun execute(pushStack: Boolean = true): Pair<Any?, ExecutionResult> {
         if (pushStack) pushToStack()
         returnValue = null
 
-        for (statement in statements) {
+        for ((index, statement) in statements.withIndex()) {
+            val isLast = index + 1 == statements.size
+
             when (statement) {
-                is Expression<*> -> statement.get()
+                is Expression<*> -> {
+                    val result = statement.get()
+
+                    if (isLast)
+                        return result
+                }
                 is Statement -> {
                     val result = statement.execute()
 
                     if (result != ExecutionResult.ContinueExecution) {
                         if (pushStack) popFromStack()
-                        return result
+                        return null to result
                     }
                 }
                 else -> throw MiniScriptException.RuntimeError("Expected a statement or expression in block")
@@ -35,7 +42,7 @@ open class Block(
         }
 
         if (pushStack) popFromStack()
-        return ExecutionResult.ContinueExecution
+        return null to ExecutionResult.ContinueExecution
     }
 
     fun pushToStack(): Frame {

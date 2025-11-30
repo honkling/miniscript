@@ -7,6 +7,7 @@ import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.miniScript
 import me.honkling.miniscript.parser.ast.Node
 import me.honkling.miniscript.parser.ast.Operator
+import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 import me.honkling.miniscript.pass.Pass
 import kotlin.collections.get
 import kotlin.reflect.KClass
@@ -17,30 +18,31 @@ class Arithmetic(
     val operator: Operator,
     parent: Node<*>?
 ) : Expression<Any?>(parent), Assignable {
-    override fun get(): Any? {
-        return getWithLeftSide().second
+    override fun get(): Pair<Any?, ExecutionResult> {
+        return getWithLeftSide().second to ExecutionResult.ContinueExecution
     }
 
     fun getWithLeftSide(): Pair<Any, Any?> {
         val block = getBlockParent() ?: throw MiniScriptException.RuntimeError("Couldn't find block")
-        val left = this.left.get()
+        val left = this.left.get().first
             ?: throw MiniScriptException.RuntimeError("Expected value")
 
         if (operator == Operator.And) {
             if (left !is Boolean)
                 throw MiniScriptException.RuntimeError("Expected boolean for AND comparison")
 
-            if (left == false)
+            if (!left)
                 return left to false
         } else if (operator == Operator.Or) {
             if (left !is Boolean)
                 throw MiniScriptException.RuntimeError("Expected boolean for OR comparison")
 
-            if (left == true)
+            if (left)
                 return left to true
         }
 
-        val right = this.right.get() ?: throw MiniScriptException.RuntimeError("Expected value")
+        val right = this.right.get().first
+            ?: throw MiniScriptException.RuntimeError("Expected value")
 
         return left to evaluateArithmetic(block.miniScript, left, right, operator)
     }
@@ -50,8 +52,8 @@ class Arithmetic(
     }
 
     override fun set(operator: TokenType, value: Any?) {
-        val left = left.get()
-        val right = right.get()
+        val left = left.get().first
+        val right = right.get().first
 
         if (left is MutableList<*>) {
             if (right !is Double)
