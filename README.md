@@ -21,7 +21,7 @@ Feel free to suggest new features in the [Issues](https://github.com/honkling/mi
 - [x] Primitives, arrays, dictionaries
 - [x] If statements
 - [x] Arithmetic
-- [ ] Ternary expressions
+- [x] Ternary expressions
 - [x] Classes
   - [ ] Constructors
 - [ ] Core standard library
