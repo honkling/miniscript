@@ -1,11 +1,17 @@
-class Test {
-    a: number
+class Test(a: number) {
+    b: number
 
     func test() -> number {
-        return this.a
+        return this.a + this.b
     }
 }
 
-ins = Test()
-ins.a = 10
+class TestInheritance(a: number, c: number) : Test(a) {
+    func test() -> number {
+        return super.test() * c
+    }
+}
+
+ins = TestInheritance(20, 10)
+ins.b = 10
 print(ins.test())

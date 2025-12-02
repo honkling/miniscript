@@ -18,34 +18,31 @@ class FunctionCall(
 ) : Expression<Any?>(parent) {
     override fun get(): Pair<Any?, ExecutionResult> {
         val result = (reference as? Arithmetic)?.getWithLeftSide() ?: reference.get().first
-        val arguments = mutableListOf<Any>()
 
-        if (result is Class) {
-            val instance = mutableMapOf<Any?, Any?>()
-
-            for (method in result.methods)
-                instance[method.name!!] = method
-
-            for (field in result.fields)
-                field.value?.let { instance[field.name] = it.get().first }
-
-            return instance to ExecutionResult.ContinueExecution
-        }
+        if (result is Class)
+            return result.instantiate(arguments) to ExecutionResult.ContinueExecution
 
         if ((result !is Pair<*, *> || result.second !is Function) && result !is Function)
             throw MiniScriptException.RuntimeError("Expected a function")
 
+        val arguments = mutableListOf<Any>()
         val function = (result as? Pair<Any, Function>)?.second ?: result as Function
 
         if (function.parameters.firstOrNull()?.name == "this") {
             // This function belongs to a class.
-            val instance = (result as Pair<Any, Function>).first
+            val instance = (result as Pair<MutableMap<Any?, Any?>, Function>).first
+            val superRef = instance["super"]!!
+
             arguments += instance
+            arguments += superRef
         }
 
         var index = 0
 
         for (parameter in function.parameters) {
+            if (index == 0 && (parameter.name == "this" || parameter.name == "super"))
+                continue
+
             if (parameter.isVararg) {
                 val rest = this.arguments.slice(index..<this.arguments.size)
                 arguments += rest.map { it.get().first }

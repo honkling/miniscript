@@ -72,6 +72,8 @@ enum class TokenType(val value: String? = null) {
     Break("break"),
     Native("native"),
     Class("class"),
+    This("this"),
+    Super("super"),
 
     Number,
     Boolean,
