@@ -42,7 +42,7 @@ class Lexer(
         if (character.isLetter() || character == '_') {
             val start = location.clone()
             val raw = lexGreedyStringByPredicate { char, index ->
-                (index == 0 && char.isLetter()) || char.isLetterOrDigit() || char == '_'
+                (index == 0 && (char.isLetter() || char == '_')) || char.isLetterOrDigit() || char == '_'
             }
 
             val isTrue = raw == "true"

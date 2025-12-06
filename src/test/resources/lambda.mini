@@ -1,0 +1,13 @@
+class Test {
+    myBlock: () -> void
+
+    func test() {
+        this.myBlock = {
+            print("hello")
+        }
+    }
+}
+
+ins = Test()
+ins.test()
+ins.myBlock()

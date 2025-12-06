@@ -3,6 +3,9 @@ package me.honkling.miniscript.stdlib
 import me.honkling.miniscript.MiniScript
 import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.parser.ast.Operator.*
+import me.honkling.miniscript.parser.ast.function.Function
+import me.honkling.miniscript.parser.ast.prototype.ClassInstance
+import me.honkling.miniscript.parser.ast.prototype.FunctionReference
 
 fun registerChangers(miniScript: MiniScript) {
     miniScript.registerChanger<Any, Any, Boolean>(Equals, NotEquals) { lhs, rhs, op ->
@@ -88,5 +91,20 @@ fun registerChangers(miniScript: MiniScript) {
             throw MiniScriptException.RuntimeError("Expected integer index for array")
 
         lhs[rhs.toInt()]!!
+    }
+
+    miniScript.registerChanger<ClassInstance, Any?, Any?>(Period) { lhs, rhs, op ->
+        lhs as ClassInstance
+
+        lhs.classRef.tryResolveFunction(rhs)?.let { FunctionReference(lhs, it) }
+            ?: (lhs.fields[rhs] as? Function)?.let { FunctionReference(lhs, it) }
+            ?: lhs.fields[rhs]
+    }
+
+    miniScript.registerChanger<ClassInstance.SuperInstance, Any?, Any?>(Period) { lhs, rhs, op ->
+        lhs as ClassInstance.SuperInstance
+
+        lhs.instance.classRef.superClass?.tryResolveFunction(rhs)?.let { FunctionReference(lhs.instance, it) }
+            ?: lhs.instance.fields[rhs]
     }
 }

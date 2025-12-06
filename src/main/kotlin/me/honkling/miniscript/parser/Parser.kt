@@ -6,29 +6,16 @@ import me.honkling.miniscript.lexer.Lexer
 import me.honkling.miniscript.lexer.Token
 import me.honkling.miniscript.lexer.TokenStream
 import me.honkling.miniscript.lexer.TokenType
-import me.honkling.miniscript.parser.ast.Block
-import me.honkling.miniscript.parser.ast.Node
-import me.honkling.miniscript.parser.ast.Operator
-import me.honkling.miniscript.parser.ast.Type
-import me.honkling.miniscript.parser.ast.Value
-import me.honkling.miniscript.parser.ast.expression.Arithmetic
-import me.honkling.miniscript.parser.ast.expression.Assignable
-import me.honkling.miniscript.parser.ast.expression.ClassDeclaration
-import me.honkling.miniscript.parser.ast.expression.Expression
-import me.honkling.miniscript.parser.ast.expression.FunctionCall
+import me.honkling.miniscript.parser.ast.*
+import me.honkling.miniscript.parser.ast.expression.*
 import me.honkling.miniscript.parser.ast.function.Function
 import me.honkling.miniscript.parser.ast.function.Parameter
-import me.honkling.miniscript.parser.ast.operator
 import me.honkling.miniscript.parser.ast.prototype.Class
 import me.honkling.miniscript.parser.ast.prototype.Field
 import me.honkling.miniscript.parser.ast.prototype.Prototype
 import me.honkling.miniscript.parser.ast.statement.Assignment
-import me.honkling.miniscript.parser.ast.expression.Break
-import me.honkling.miniscript.parser.ast.expression.Continue
 import me.honkling.miniscript.parser.ast.statement.FunctionDeclaration
-import me.honkling.miniscript.parser.ast.expression.If
 import me.honkling.miniscript.parser.ast.statement.Loop
-import me.honkling.miniscript.parser.ast.expression.Return
 import me.honkling.miniscript.parser.ast.string.ComplexString
 import me.honkling.miniscript.parser.ast.string.Component
 
@@ -51,7 +38,7 @@ class Parser(
             else stream.consume()
         }
 
-        val block = Block(miniScript, mutableListOf<Node<*>>(), parent)
+        val block = Block(miniScript, mutableListOf(), parent)
 
         while (!stream.isEnd() && stream.peek().type != TokenType.CloseBrace) {
             try {
@@ -76,7 +63,7 @@ class Parser(
         return when (token.type) {
             TokenType.Class -> parseClassDeclaration(parent)
             TokenType.Native, TokenType.Function -> parseFunctionDeclaration(parent)
-            TokenType.Identifier -> parseIdentifierExecutable(parent)
+            TokenType.This, TokenType.Super, TokenType.Identifier -> parseIdentifierExecutable(parent)
             TokenType.ForEach -> parseForEach(parent)
             TokenType.While -> parseWhile(parent)
             TokenType.Return -> parseReturn(parent)
@@ -145,11 +132,19 @@ class Parser(
         }
     }
 
-    fun parseExpression(parent: Node<*>?): Expression<*> {
-        return parseArithmetic(parsePrimary(null), 0, parent)
+    fun parseExpression(
+        parent: Node<*>?,
+        referenceMode: Boolean = false
+    ): Expression<*> {
+        return parseArithmetic(parsePrimary(null, referenceMode), 0, parent, referenceMode)
     }
 
-    fun parseArithmetic(lhs: Expression<*>, minPrecedence: Int, parent: Node<*>?): Expression<*> {
+    fun parseArithmetic(
+        lhs: Expression<*>,
+        minPrecedence: Int,
+        parent: Node<*>?,
+        referenceMode: Boolean
+    ): Expression<*> {
         var lhs = lhs
         var lookahead = stream.peek()
         var operatorInfo = operator(lookahead.type)
@@ -158,7 +153,7 @@ class Parser(
             val operator = lookahead
             stream.consume()
 
-            var rhs = parsePrimary(null)
+            var rhs = parsePrimary(null, referenceMode)
 
             lookahead = stream.peek()
             var lookaheadOperator = operator(lookahead.type)
@@ -166,7 +161,7 @@ class Parser(
 
             while (lookaheadOperator != null && (greaterPrecedence || (lookaheadOperator.isRightAssociated
                     && lookaheadOperator.precedence == operatorInfo.precedence))) {
-                rhs = parseArithmetic(rhs, operatorInfo.precedence + if (greaterPrecedence) 1 else 0, null)
+                rhs = parseArithmetic(rhs, operatorInfo.precedence + if (greaterPrecedence) 1 else 0, null, referenceMode)
                 lookahead = stream.peek()
                 lookaheadOperator = operator(lookahead.type)
                 greaterPrecedence = lookaheadOperator != null && lookaheadOperator.precedence > operatorInfo.precedence
@@ -183,15 +178,21 @@ class Parser(
         return lhs
     }
 
-    fun parsePrimary(parent: Node<*>?): Expression<*> {
-        var expression = parseOneExpression(parent)
+    fun parsePrimary(parent: Node<*>?, referenceMode: Boolean): Expression<*> {
+        var expression = parseOneExpression(parent, referenceMode)
 
         while (true)
             when (stream.peek().type) {
                 TokenType.OpenParen -> {
+                    if (referenceMode)
+                        break
+
                     expression = parseFunctionCall(expression, parent)
                 }
                 TokenType.OpenBracket -> {
+                    if (referenceMode)
+                        break
+
                     stream.consume()
                     val expr = parseExpression(null)
                     stream.consume().expect(TokenType.CloseBracket)
@@ -215,7 +216,7 @@ class Parser(
         return expression
     }
 
-    fun parseOneExpression(parent: Node<*>?): Expression<*> {
+    fun parseOneExpression(parent: Node<*>?, referenceMode: Boolean): Expression<*> {
         return when (stream.peek().type) {
             TokenType.Class -> parseClassDeclaration(parent)
             TokenType.OpenParen -> {
@@ -228,7 +229,7 @@ class Parser(
             TokenType.Continue -> parseContinue(parent)
             TokenType.Break -> parseBreak(parent)
             TokenType.If -> parseIf(parent)
-            else -> parseValue(parent)
+            else -> parseValue(parent, referenceMode)
         }
     }
 
@@ -264,10 +265,19 @@ class Parser(
             stream.consume()
         else null
 
-        val superClass = if (stream.peek().type == TokenType.Colon) {
+        val parameters = if (stream.peek().type == TokenType.OpenParen)
+            parseFunctionParameters()
+        else emptyList()
+
+        val (superClass, superArguments) = if (stream.peek().type == TokenType.Colon) {
             stream.consume()
-            parseExpression(null)
-        } else null
+            val ref = parseExpression(null, true)
+            val arguments = if (stream.peek().type == TokenType.OpenParen)
+                parseFunctionArguments()
+            else emptyList()
+
+            ref to arguments
+        } else null to emptyList()
 
         stream.consume().expect(TokenType.OpenBrace)
         val methods = mutableListOf<Function>()
@@ -287,7 +297,8 @@ class Parser(
         }
 
         stream.consume().expect(TokenType.CloseBrace)
-        val `class` = Class(name?.raw, null, methods, fields, null)
+
+        val `class` = Class(name?.raw, null, superArguments, methods, parameters, fields, null)
         methods.forEach { it.parent = `class` }
         fields.forEach { it.parent = `class` }
 
@@ -312,17 +323,7 @@ class Parser(
     }
 
     fun parseFunctionCall(expression: Expression<*>, parent: Node<*>?): FunctionCall {
-        stream.consume().expect(TokenType.OpenParen)
-        val arguments = mutableListOf<Expression<*>>()
-
-        while (stream.peek().type != TokenType.CloseParen) {
-            arguments += parseExpression(null)
-
-            if (stream.peek().type != TokenType.CloseParen)
-                stream.consume().expect(TokenType.Comma, "Expected ',' or ')', found {1}")
-        }
-
-        stream.consume().expect(TokenType.CloseParen)
+        val arguments = parseFunctionArguments()
         val function = if (stream.peek().type == TokenType.OpenBrace) {
             stream.consume()
             parseFunctionValue(null)
@@ -335,6 +336,21 @@ class Parser(
         return functionCall
     }
 
+    fun parseFunctionArguments(): MutableList<Expression<*>> {
+        val arguments = mutableListOf<Expression<*>>()
+        stream.consume().expect(TokenType.OpenParen)
+
+        while (stream.peek().type != TokenType.CloseParen) {
+            arguments += parseExpression(null)
+
+            if (stream.peek().type != TokenType.CloseParen)
+                stream.consume().expect(TokenType.Comma, "Expected ',' or ')', found {1}")
+        }
+
+        stream.consume().expect(TokenType.CloseParen)
+        return arguments
+    }
+
     fun parseFunction(parent: Node<*>?): Function {
         val isNative = stream.peek().type == TokenType.Native
         if (isNative)
@@ -343,6 +359,20 @@ class Parser(
         stream.consume().expect(TokenType.Function)
 
         val name = stream.consume().expect(TokenType.Identifier, "Expected a function name, found {1}")
+        val parameters = parseFunctionParameters()
+        val returnType = if (stream.peek().type == TokenType.Arrow) {
+            stream.consume()
+            parseType()
+        } else null
+
+        val block = if (isNative) null else parseBlock(null)
+        val function = Function(name.raw, parameters, returnType, block, false, parent)
+        parameters.forEach { it.parent = function}
+        block?.parent = function
+        return function
+    }
+
+    fun parseFunctionParameters(): MutableList<Parameter> {
         val parameters = mutableListOf<Parameter>()
         stream.consume().expect(TokenType.OpenParen)
 
@@ -354,7 +384,7 @@ class Parser(
 
             val name = stream.consume().expect(TokenType.Identifier, "Expected a parameter name or ')', found {1}")
             stream.consume().expect(TokenType.Colon)
-            val type = Type.Array(parseType())
+            val type = parseType().let { if (isVararg) Type.Array(it) else it }
             val defaultValue = if (stream.peek().type == TokenType.Assign) {
                 stream.consume()
                 parseExpression(null)
@@ -369,16 +399,7 @@ class Parser(
         }
 
         stream.consume().expect(TokenType.CloseParen)
-        val returnType = if (stream.peek().type == TokenType.Arrow) {
-            stream.consume()
-            parseType()
-        } else null
-
-        val block = if (isNative) null else parseBlock(null)
-        val function = Function(name.raw, parameters, returnType, block, false, parent)
-        parameters.forEach { it.parent = function}
-        block?.parent = function
-        return function
+        return parameters
     }
 
     fun parseFunctionDeclaration(parent: Block): FunctionDeclaration {
@@ -406,8 +427,13 @@ class Parser(
         return Break(parent)
     }
 
-    fun parseValue(parent: Node<*>?): Value<*> {
+    fun parseValue(parent: Node<*>?, referenceMode: Boolean = false): Value<*> {
         val token = stream.consume()
+
+        if (referenceMode) {
+            token.expect(TokenType.Identifier, "Expected identifier, found {1}")
+            return Value.Variable(token.raw, parent)
+        }
 
         @Suppress("UNCHECKED_CAST")
         return when (token.type) {
@@ -415,6 +441,8 @@ class Parser(
             TokenType.Boolean -> Value.Boolean((token as Token.WithValue<Boolean>).value, parent)
             TokenType.String -> parseString(token as Token.WithValue<String>, parent)
             TokenType.Identifier -> Value.Variable(token.raw, parent)
+            TokenType.This -> Value.Variable("this", parent)
+            TokenType.Super -> Value.Super(parent)
             TokenType.OpenBracket -> parseArray(parent)
             TokenType.OpenBrace -> {
                 val branch = stream.branch()
@@ -532,7 +560,7 @@ class Parser(
 
     fun parseString(token: Token.WithValue<String>, parent: Node<*>?): ComplexString {
         val raw = token.value
-        val string = ComplexString(mutableListOf<Component>(), parent)
+        val string = ComplexString(mutableListOf(), parent)
         val value = StringBuilder()
         var success = true
         var index = 0
