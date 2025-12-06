@@ -3,6 +3,7 @@ package me.honkling.miniscript
 import me.honkling.miniscript.diagnostic.DiagnosticType
 import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.diagnostic.Logger
+import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.lexer.Lexer
 import me.honkling.miniscript.lexer.TokenStream
 import me.honkling.miniscript.lexer.TokenType
@@ -33,6 +34,7 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
 
         if (hasStandardLibrary) {
 //            evaluateResource("stdlib/files.mini")
+            evaluateResource("stdlib/strings.mini")
             evaluateResource("stdlib/logging.mini", ::registerStdlibLogging)
             evaluateResource("stdlib/loops.mini", ::registerStdlibLoops)
             evaluateResource("stdlib/locale.mini", ::registerStdlibLocale)
@@ -95,7 +97,13 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
 //            }
 //        }
 
-        block.execute(!internalMode)
+        try {
+            block.execute(!internalMode)
+        } catch (exception: MiniScriptException.RuntimeError) {
+            val location = exception.node?.location?.let { "(${it.line}:${it.column})" }
+            System.err.println("runtime error$location: ${exception.message}")
+            throw exception
+        }
     }
 
     fun evaluate(file: File) {

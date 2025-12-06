@@ -1,5 +1,6 @@
 package me.honkling.miniscript.parser.ast
 
+import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.parser.ast.expression.Assignable
@@ -11,16 +12,17 @@ import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 import me.honkling.miniscript.pass.Pass
 import me.honkling.miniscript.parser.ast.function.Function as MSFunction
 
-abstract class Value<T>(parent: Node<*>?) : Expression<T>(parent) {
-    open class Simple<T : Any>(private val value: T, parent: Node<*>?) : Value<T>(parent) {
+abstract class Value<T>(location: Location, parent: Node<*>?) : Expression<T>(location, parent) {
+    open class Simple<T : Any>(private val value: T, location: Location, parent: Node<*>?) : Value<T>(location, parent) {
         override fun get() = value to ExecutionResult.ContinueExecution
     }
 
-    class Number(value: Double, parent: Node<*>?) : Simple<Double>(value,  parent)
-    class Boolean(value: kotlin.Boolean, parent: Node<*>?) : Simple<kotlin.Boolean>(value,  parent)
-    class Function(value: MSFunction, parent: Node<*>?) : Simple<MSFunction>(value, parent)
-    class MemberAccess(value: String, parent: Node<*>?) : Simple<String>(value, parent)
-    class Super(parent: Node<*>?) : Value<Any?>(parent) {
+    class Character(value: Char, location: Location, parent: Node<*>?) : Simple<Char>(value, location, parent)
+    class Number(value: Double, location: Location, parent: Node<*>?) : Simple<Double>(value,  location, parent)
+    class Boolean(value: kotlin.Boolean, location: Location, parent: Node<*>?) : Simple<kotlin.Boolean>(value,  location, parent)
+    class Function(value: MSFunction, location: Location, parent: Node<*>?) : Simple<MSFunction>(value, location, parent)
+    class MemberAccess(value: String, location: Location, parent: Node<*>?) : Simple<String>(value, location, parent)
+    class Super(location: Location, parent: Node<*>?) : Value<Any?>(location, parent) {
         override fun get(): Pair<Any?, ExecutionResult> {
             val thisRef = parent?.getSymbol("this") as? ClassInstance
                 ?: return null to ExecutionResult.ContinueExecution
@@ -29,7 +31,7 @@ abstract class Value<T>(parent: Node<*>?) : Expression<T>(parent) {
         }
     }
 
-    class Variable(private val value: String, parent: Node<*>?) : Value<Any?>(parent), Assignable {
+    class Variable(private val value: String, location: Location, parent: Node<*>?) : Value<Any?>(location, parent), Assignable {
         override fun get(): Pair<Any?, ExecutionResult> {
             val value = parent?.getSymbol(value)
 
@@ -57,24 +59,24 @@ abstract class Value<T>(parent: Node<*>?) : Expression<T>(parent) {
                         TokenType.MinusAssign, TokenType.Decrement -> Operator.Minus
                         TokenType.MultiplyAssign -> Operator.Multiply
                         TokenType.DivideAssign -> Operator.Divide
-                        else -> throw MiniScriptException.RuntimeError()
+                        else -> throw IllegalStateException("Invalid operator for variable")
                     }
 
                     val value = value
                         ?: 1.0
 
                     val changer = tryGetChanger(miniScript, currentValue!!::class, value::class, operator)
-                        ?: throw MiniScriptException.RuntimeError("Couldn't find changer")
+                        ?: throw MiniScriptException.RuntimeError("Couldn't find changer", this)
 
                     val newValue = changer.block(currentValue, value, operator)
                     parent?.setSymbol(this.value, newValue)
                 }
-                else -> throw MiniScriptException.RuntimeError("Invalid operator ${type.name}")
+                else -> throw MiniScriptException.RuntimeError("Invalid operator ${type.name}", this)
             }
         }
     }
 
-    class Array(private val elements: List<Expression<*>>, parent: Node<*>?) : Value<List<Any?>>(parent) {
+    class Array(private val elements: List<Expression<*>>, location: Location, parent: Node<*>?) : Value<List<Any?>>(location, parent) {
         override fun get(): Pair<List<Any?>, ExecutionResult> {
             val values = mutableListOf<Any?>()
 
@@ -85,7 +87,7 @@ abstract class Value<T>(parent: Node<*>?) : Expression<T>(parent) {
         }
     }
 
-    class Dictionary(private val elements: Map<String, Expression<*>>, parent: Node<*>?) : Value<MutableMap<Any?, Any?>>(parent) {
+    class Dictionary(private val elements: Map<String, Expression<*>>, location: Location, parent: Node<*>?) : Value<MutableMap<Any?, Any?>>(location, parent) {
         override fun get(): Pair<MutableMap<Any?, Any?>, ExecutionResult> {
             val values = mutableMapOf<Any?, Any?>()
 

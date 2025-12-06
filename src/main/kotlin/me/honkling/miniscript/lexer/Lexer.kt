@@ -6,7 +6,8 @@ import me.honkling.miniscript.diagnostic.MiniScriptException
 
 private const val newLine = '\n'
 private const val escape = '\\'
-private const val quotes = '"'
+private const val doubleQuotes = '"'
+private const val singleQuotes = '\''
 private const val period = '.'
 
 class Lexer(
@@ -30,7 +31,10 @@ class Lexer(
     private fun lexToken(): Token {
         val character = input[location.index]
 
-        if (character == quotes)
+        if (character == singleQuotes)
+            return lexCharacter()
+
+        if (character == doubleQuotes)
             return lexString()
 
         if (character.isDigit())
@@ -72,7 +76,39 @@ class Lexer(
         throw MiniScriptException.LexError()
     }
 
-    private fun lexNumber(): Token {
+    private fun lexCharacter(): Token.WithValue<Char> {
+        val start = location.clone()
+        val raw = StringBuilder()
+
+        raw.append(input[advance(1).index])
+        val consumedCharacter = input.getOrNull(advance(1).index)
+        raw.append(consumedCharacter)
+
+        val character = when (consumedCharacter) {
+            escape -> {
+                val character = input.getOrNull(advance(1).index)
+                raw.append(character)
+                character
+            }
+            else -> consumedCharacter
+        }
+
+        if (character == null) {
+            logger.error("Expected a character, found nothing")
+            throw MiniScriptException.LexError()
+        }
+
+        val endingCharacter = input.getOrNull(advance(1).index)
+        if (endingCharacter != singleQuotes) {
+            logger.error("Expected \"'\", found ${endingCharacter?.let { "'$it'" } ?: "nothing"}")
+            throw MiniScriptException.LexError()
+        }
+
+        raw.append(endingCharacter)
+        return Token.WithValue(TokenType.Character, raw.toString(), start, logger, character)
+    }
+
+    private fun lexNumber(): Token.WithValue<Double> {
         val start = location.clone()
         val raw = StringBuilder()
         var hasPeriod = false
@@ -103,7 +139,7 @@ class Lexer(
         return Token.WithValue(TokenType.Number, raw.toString(), start, logger, value)
     }
 
-    private fun lexString(): Token {
+    private fun lexString(): Token.WithValue<String> {
         val start = location.clone()
         val value = StringBuilder()
         val raw = StringBuilder("\"")
@@ -121,7 +157,7 @@ class Lexer(
             raw.append(character)
 
             when (character) {
-                quotes -> break
+                doubleQuotes -> break
                 escape -> {
                     val escapedCharacter = input.getOrNull(advance(1).index)
 

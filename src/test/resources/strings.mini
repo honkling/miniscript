@@ -1,0 +1,2 @@
+test_string = "hello world"
+print(test_string.substring(1, 3).value)

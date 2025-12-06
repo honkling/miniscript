@@ -17,8 +17,9 @@ import me.honkling.miniscript.parser.ast.expression.Break
 import me.honkling.miniscript.parser.ast.expression.Continue
 import me.honkling.miniscript.parser.ast.statement.FunctionDeclaration
 import me.honkling.miniscript.parser.ast.expression.If
+import me.honkling.miniscript.parser.ast.expression.NativeExpression
 import me.honkling.miniscript.parser.ast.statement.Loop
-import me.honkling.miniscript.parser.ast.statement.Native
+import me.honkling.miniscript.parser.ast.statement.NativeStatement
 import me.honkling.miniscript.parser.ast.expression.Return
 
 abstract class Pass {
@@ -30,7 +31,8 @@ abstract class Pass {
     open fun visitBlock(node: Block) {}
     open fun visitValue(node: Value<*>) {}
     open fun visitType(node: Type<*>) {}
-    open fun visitNative(node: Native) {}
+    open fun visitNativeStatement(node: NativeStatement) {}
+    open fun visitNativeExpression(node: NativeExpression<*>) {}
     open fun visitLoop(node: Loop) {}
     open fun visitReturn(node: Return) {}
     open fun visitContinue(node: Continue) {}

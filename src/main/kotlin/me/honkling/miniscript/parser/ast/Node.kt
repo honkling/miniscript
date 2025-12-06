@@ -1,9 +1,11 @@
 package me.honkling.miniscript.parser.ast
 
+import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.pass.Pass
 import kotlin.reflect.KClass
 
 abstract class Node<T>(
+    val location: Location?,
     var parent: T
 ) {
     abstract fun accept(pass: Pass)

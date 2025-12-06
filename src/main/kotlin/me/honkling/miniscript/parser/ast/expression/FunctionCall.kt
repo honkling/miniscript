@@ -1,5 +1,6 @@
 package me.honkling.miniscript.parser.ast.expression
 
+import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.parser.ast.Node
 import me.honkling.miniscript.parser.ast.Type
@@ -15,8 +16,9 @@ class FunctionCall(
     val reference: Expression<*>,
     val arguments: List<Expression<*>>,
     val lambda: Function?,
+    location: Location,
     parent: Node<*>?
-) : Expression<Any?>(parent) {
+) : Expression<Any?>(location, parent) {
     override fun get(): Pair<Any?, ExecutionResult> {
         val result = (reference as? Arithmetic)?.getWithLeftSide() ?: reference.get().first
 
@@ -24,7 +26,7 @@ class FunctionCall(
             return result.instantiate(arguments) to ExecutionResult.ContinueExecution
 
         if (result !is FunctionReference && (result as? Pair<*, *>)?.second !is FunctionReference)
-            throw MiniScriptException.RuntimeError("Expected a function")
+            throw MiniScriptException.RuntimeError("Expected a function", this)
 
         val arguments = mutableListOf<Any>()
         val (instance, function) = (result as? Pair<Any, FunctionReference>)?.second ?: result as FunctionReference
@@ -40,7 +42,7 @@ class FunctionCall(
             }
 
             arguments += this.arguments[index].get().first
-                ?: throw MiniScriptException.RuntimeError("Expected argument value, found nothing")
+                ?: throw MiniScriptException.RuntimeError("Expected argument value, found nothing", this)
         }
 
         val symbols = mutableMapOf<String, Any?>()
