@@ -34,8 +34,8 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
         if (hasStandardLibrary) {
 //            evaluateResource("stdlib/files.mini")
             evaluateResource("stdlib/logging.mini", ::registerStdlibLogging)
-//            evaluateResource("stdlib/loops.mini", ::registerStdlibLoops)
-//            evaluateResource("stdlib/locale.mini", ::registerStdlibLocale)
+            evaluateResource("stdlib/loops.mini", ::registerStdlibLoops)
+            evaluateResource("stdlib/locale.mini", ::registerStdlibLocale)
         }
     }
 
