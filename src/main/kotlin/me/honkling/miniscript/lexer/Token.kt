@@ -61,7 +61,7 @@ enum class TokenType(val value: String? = null) {
     If("if"),
     Else("else"),
     While("while"),
-    StringType("string"),
+    CharType("char"),
     NumberType("number"),
     BooleanType("boolean"),
     DictType("dict"),
@@ -78,6 +78,7 @@ enum class TokenType(val value: String? = null) {
     Number,
     Boolean,
     String,
+    Character,
 
     Spread("..."),
     OpenParen("("),

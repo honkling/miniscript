@@ -13,7 +13,7 @@ fun registerStdlibLoops(miniScript: MiniScript, symbols: SymbolTable) {
         val function = getSymbol("block") as Function
 
         if (count.mod(1.0) != 0.0)
-            throw MiniScriptException.RuntimeError("Can't repeat a non-integer amount of times")
+            throw MiniScriptException.RuntimeError("Can't repeat a non-integer amount of times", this)
 
         for (i in 0..<count.toLong())
             function.call(i.toDouble())

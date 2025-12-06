@@ -22,7 +22,7 @@ fun registerChangers(miniScript: MiniScript) {
             Minus -> lhs - rhs
             Multiply -> lhs * rhs
             Divide -> lhs / rhs
-            else -> throw MiniScriptException.RuntimeError("Unknown operator $op")
+            else -> throw IllegalStateException("Invalid operator")
         }
     }
 
@@ -35,7 +35,7 @@ fun registerChangers(miniScript: MiniScript) {
             GreaterEquals -> lhs >= rhs
             LessThan -> lhs < rhs
             LessEquals -> lhs <= rhs
-            else -> throw MiniScriptException.RuntimeError("Unknown operator $op")
+            else -> throw IllegalStateException("Invalid operator")
         }
     }
 
@@ -44,7 +44,7 @@ fun registerChangers(miniScript: MiniScript) {
         val double = rhs as? Double ?: lhs as Double
 
         if (double.mod(1.0) != 0.0)
-            throw MiniScriptException.RuntimeError("Can't repeat a string a non-integer amount of times")
+            throw MiniScriptException.RuntimeError("Can't repeat a string a non-integer amount of times", null)
 
         string.repeat(double.toInt())
     }
@@ -88,7 +88,7 @@ fun registerChangers(miniScript: MiniScript) {
         rhs as Double
 
         if (rhs.mod(1.0) != 0.0)
-            throw MiniScriptException.RuntimeError("Expected integer index for array")
+            throw MiniScriptException.RuntimeError("Expected integer index for array", null)
 
         lhs[rhs.toInt()]!!
     }

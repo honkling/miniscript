@@ -1,6 +1,7 @@
 package me.honkling.miniscript.parser.ast
 
 import me.honkling.miniscript.MiniScript
+import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.parser.ast.expression.Expression
 import me.honkling.miniscript.parser.ast.stack.Frame
@@ -11,8 +12,9 @@ import me.honkling.miniscript.pass.Pass
 open class Block(
     val miniScript: MiniScript,
     val statements: MutableList<Node<*>>,
+    location: Location?,
     parent: Node<*>?,
-) : Node<Node<*>?>(parent) {
+) : Node<Node<*>?>(location, parent) {
     var returnValue: Any? = null
 
     fun execute(pushStack: Boolean = true): Pair<Any?, ExecutionResult> {
@@ -37,7 +39,7 @@ open class Block(
                         return null to result
                     }
                 }
-                else -> throw MiniScriptException.RuntimeError("Expected a statement or expression in block")
+                else -> throw MiniScriptException.RuntimeError("Expected a statement or expression in block", this)
             }
         }
 

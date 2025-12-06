@@ -1,5 +1,6 @@
 package me.honkling.miniscript.parser.ast.prototype
 
+import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.parser.ast.Node
 import me.honkling.miniscript.parser.ast.Type
 import me.honkling.miniscript.parser.ast.expression.Expression
@@ -14,8 +15,9 @@ class Class(
     val methods: List<Function>,
     val constructorParameters: List<Parameter>,
     fields: MutableList<Field>,
+    location: Location,
     parent: Node<*>?
-) : Prototype(name, fields, parent) {
+) : Prototype(name, fields, location, parent) {
     fun instantiate(arguments: List<Expression<*>>): ClassInstance {
         val instance = superClass?.instantiate(superArgs)
             ?: ClassInstance(this)

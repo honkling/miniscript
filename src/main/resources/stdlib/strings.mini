@@ -1,3 +1,13 @@
-class String(value: string) {
+class String(value: char[]) {
+    func substring(from: number, to: number) -> String {
+        new_chars = []
+        index = from
 
+        while (index < to) {
+            new_chars += this.value[index]
+            index++
+        }
+
+        return String(new_chars)
+    }
 }

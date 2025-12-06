@@ -1,12 +1,13 @@
 package me.honkling.miniscript.parser.ast.expression
 
+import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.parser.ast.Block
 import me.honkling.miniscript.parser.ast.Node
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 import me.honkling.miniscript.parser.ast.statement.Statement
 import me.honkling.miniscript.pass.Pass
 
-class Break(parent: Node<*>?) : Expression<Nothing?>(parent) {
+class Break(location: Location, parent: Node<*>?) : Expression<Nothing?>(location, parent) {
     override fun get(): Pair<Nothing?, ExecutionResult> {
         return null to ExecutionResult.BreakLoop
     }

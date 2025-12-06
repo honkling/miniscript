@@ -2,6 +2,7 @@ package me.honkling.miniscript.parser.ast.expression
 
 import me.honkling.miniscript.Changer
 import me.honkling.miniscript.MiniScript
+import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.miniScript
@@ -17,35 +18,36 @@ class Arithmetic(
     val left: Expression<*>,
     val right: Expression<*>,
     val operator: Operator,
+    location: Location,
     parent: Node<*>?
-) : Expression<Any?>(parent), Assignable {
+) : Expression<Any?>(location, parent), Assignable {
     override fun get(): Pair<Any?, ExecutionResult> {
         return getWithLeftSide().second to ExecutionResult.ContinueExecution
     }
 
     fun getWithLeftSide(): Pair<Any, Any?> {
-        val block = getBlockParent() ?: throw MiniScriptException.RuntimeError("Couldn't find block")
+        val block = getBlockParent() ?: throw MiniScriptException.RuntimeError("Couldn't find block", this)
         val left = this.left.get().first
-            ?: throw MiniScriptException.RuntimeError("Expected value")
+            ?: throw MiniScriptException.RuntimeError("Expected value", this)
 
         if (operator == Operator.And) {
             if (left !is Boolean)
-                throw MiniScriptException.RuntimeError("Expected boolean for AND comparison")
+                throw MiniScriptException.RuntimeError("Expected boolean for AND comparison", this)
 
             if (!left)
                 return left to false
         } else if (operator == Operator.Or) {
             if (left !is Boolean)
-                throw MiniScriptException.RuntimeError("Expected boolean for OR comparison")
+                throw MiniScriptException.RuntimeError("Expected boolean for OR comparison", this)
 
             if (left)
                 return left to true
         }
 
         val right = this.right.get().first
-            ?: throw MiniScriptException.RuntimeError("Expected value")
+            ?: throw MiniScriptException.RuntimeError("Expected value", this)
 
-        return left to evaluateArithmetic(block.miniScript, left, right, operator)
+        return left to evaluateArithmetic(block.miniScript, this, left, right, operator)
     }
 
     override fun canAssign(): Boolean {
@@ -58,7 +60,7 @@ class Arithmetic(
 
         if (left is MutableList<*>) {
             if (right !is Double)
-                throw MiniScriptException.RuntimeError("Expected integer index for array")
+                throw MiniScriptException.RuntimeError("Expected integer index for array", this)
 
             left as MutableList<Any?>
             left[right.toInt()] = value
@@ -76,12 +78,12 @@ class Arithmetic(
     }
 }
 
-fun evaluateArithmetic(miniScript: MiniScript, left: Any?, right: Any?, operator: Operator): Any? {
+fun evaluateArithmetic(miniScript: MiniScript, node: Arithmetic, left: Any?, right: Any?, operator: Operator): Any? {
     val leftClass = left?.let { it::class } ?: Any::class
     val rightClass = right?.let { it::class } ?: Any::class
 
     val changer = tryGetChanger(miniScript, leftClass, rightClass, operator)
-        ?: throw MiniScriptException.RuntimeError("Invalid operator $operator for '$left' and '$right'")
+        ?: throw MiniScriptException.RuntimeError("Invalid operator $operator for '$left' and '$right'", node)
 
     return changer.block(left, right, operator)
 }

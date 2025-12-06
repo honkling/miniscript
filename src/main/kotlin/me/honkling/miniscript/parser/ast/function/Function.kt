@@ -1,5 +1,6 @@
 package me.honkling.miniscript.parser.ast.function
 
+import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.parser.ast.Block
 import me.honkling.miniscript.parser.ast.Node
@@ -13,14 +14,15 @@ class Function(
     val returnType: Type<*>?,
     var block: Block?,
     val isLambda: Boolean,
+    location: Location,
     parent: Node<*>?
-) : Node<Node<*>?>(parent) {
+) : Node<Node<*>?>(location, parent) {
     fun call(vararg arguments: Any, lambda: Function? = null, symbols: Map<String, Any?> = emptyMap()): Any? {
         val parameterSize = parameters.size
         val argumentSize = arguments.size + if (lambda == null) 0 else 1
         if ((!isLambda && parameterSize != argumentSize) || parameterSize > argumentSize) {
             val form = if (parameterSize == 1) "argument" else "s"
-            throw MiniScriptException.RuntimeError("Expected $parameterSize $form, found $argumentSize")
+            throw MiniScriptException.RuntimeError("Expected $parameterSize $form, found $argumentSize", this)
         }
 
         val frame = block!!.pushToStack()
@@ -37,7 +39,7 @@ class Function(
 
         if (lambda != null) {
             val blockArgument = parameters.lastOrNull { it.type is Type.Function }
-                ?: throw MiniScriptException.RuntimeError("Passed block to function without a block parameter")
+                ?: throw MiniScriptException.RuntimeError("Passed block to function without a block parameter", this)
 
             frame.symbolTable[blockArgument.name!!] = lambda
         }

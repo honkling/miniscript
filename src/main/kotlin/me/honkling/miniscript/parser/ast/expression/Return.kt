@@ -1,5 +1,6 @@
 package me.honkling.miniscript.parser.ast.expression
 
+import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.parser.ast.Block
 import me.honkling.miniscript.parser.ast.Node
 import me.honkling.miniscript.parser.ast.function.Function
@@ -9,8 +10,9 @@ import me.honkling.miniscript.pass.Pass
 
 class Return(
     val expression: Expression<*>,
+    location: Location,
     parent: Node<*>?
-) : Expression<Nothing?>(parent) {
+) : Expression<Nothing?>(location, parent) {
     override fun get(): Pair<Nothing?, ExecutionResult> {
         getParent<Function>(Function::class).block!!.returnValue = expression.get().first
         return null to ExecutionResult.Return
