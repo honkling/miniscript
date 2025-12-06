@@ -10,11 +10,13 @@ import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.parser.Parser
 import me.honkling.miniscript.parser.ast.Operator
 import me.honkling.miniscript.parser.ast.SymbolTable
+import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.stack.Environment
 import me.honkling.miniscript.stdlib.registerChangers
 import me.honkling.miniscript.stdlib.registerStdlibLocale
 import me.honkling.miniscript.stdlib.registerStdlibLogging
 import me.honkling.miniscript.stdlib.registerStdlibLoops
+import me.honkling.miniscript.parser.ast.prototype.Class as MSClass
 import java.io.File
 import kotlin.reflect.KClass
 
@@ -30,14 +32,15 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
     val changers = mutableMapOf<KClass<*>, MutableMap<KClass<*>, MutableList<Changer<*>>>>()
 
     init {
-        registerChangers(this)
-
         if (hasStandardLibrary) {
 //            evaluateResource("stdlib/files.mini")
             evaluateResource("stdlib/strings.mini")
             evaluateResource("stdlib/logging.mini", ::registerStdlibLogging)
             evaluateResource("stdlib/loops.mini", ::registerStdlibLoops)
             evaluateResource("stdlib/locale.mini", ::registerStdlibLocale)
+            environment.resolveReferences()
+
+            registerChangers(this)
         }
     }
 
@@ -47,7 +50,43 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
     ) {
         val first = changers.getOrPut(F::class, ::mutableMapOf)
         val second = first.getOrPut(S::class, ::mutableListOf)
-        second += Changer<R>(validOperators.toSet(), block)
+        second += Changer(validOperators.toSet(), block)
+    }
+
+    inline fun <reified R> registerClassChanger(
+        classOne: MSClass,
+        classTwo: MSClass,
+        vararg validOperators: Operator,
+        noinline block: ChangerBlock<ClassInstance, ClassInstance, R>
+    ) {
+        val first = changers.getOrPut(ClassInstance::class, ::mutableMapOf)
+        val second = first.getOrPut(ClassInstance::class, ::mutableListOf)
+        second += Changer(validOperators.toSet()) { lhs, rhs, op ->
+            lhs as ClassInstance
+            rhs as ClassInstance
+
+            if ((lhs.classRef != classOne && lhs.classRef != classTwo) || (rhs.classRef != classOne && rhs.classRef != classTwo))
+                throw MiniScriptException.WrongChanger()
+
+            block(lhs, rhs, op)
+        }
+    }
+
+    inline fun <reified O, reified R> registerClassChanger(
+        `class`: MSClass,
+        vararg validOperators: Operator,
+        noinline block: ChangerBlock<Any?, Any?, R>
+    ) {
+        val first = changers.getOrPut(ClassInstance::class, ::mutableMapOf)
+        val second = first.getOrPut(O::class, ::mutableListOf)
+        second += Changer(validOperators.toSet()) { lhs, rhs, op ->
+            val classInstance = lhs as? ClassInstance ?: rhs as ClassInstance
+
+            if (classInstance.classRef != `class`)
+                throw MiniScriptException.WrongChanger()
+
+            block(lhs, rhs, op)
+        }
     }
 
     protected fun evaluateResource(name: String, registrar: (MiniScript, SymbolTable) -> Unit = { _, _ -> }) {

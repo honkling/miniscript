@@ -82,26 +82,32 @@ fun evaluateArithmetic(miniScript: MiniScript, node: Arithmetic, left: Any?, rig
     val leftClass = left?.let { it::class } ?: Any::class
     val rightClass = right?.let { it::class } ?: Any::class
 
-    val changer = tryGetChanger(miniScript, leftClass, rightClass, operator)
+    val changers = tryGetChangers(miniScript, leftClass, rightClass, operator)
         ?: throw MiniScriptException.RuntimeError("Invalid operator $operator for '$left' and '$right'", node)
 
-    return changer.block(left, right, operator)
+    for (changer in changers) {
+        try {
+            return changer.block(left, right, operator)
+        } catch (_: MiniScriptException.WrongChanger) {}
+    }
+
+    return null
 }
 
-fun tryGetChanger(miniScript: MiniScript, leftClass: KClass<*>, rightClass: KClass<*>, op: Operator, tryVariant: Boolean = true): Changer<*>? {
+fun tryGetChangers(miniScript: MiniScript, leftClass: KClass<*>, rightClass: KClass<*>, op: Operator, tryVariant: Boolean = true): List<Changer<*>>? {
     val changers = miniScript.changers
 
     changers[leftClass]?.get(rightClass)
-        ?.find { op in it.validOperators }
+        ?.filter { op in it.validOperators }
         ?.let { return it }
 
     if (tryVariant)
-        return tryGetChanger(miniScript, rightClass, leftClass, op, false)
-            ?: tryGetChanger(miniScript, Any::class, rightClass, op, false)
-            ?: tryGetChanger(miniScript, rightClass, Any::class, op, false)
-            ?: tryGetChanger(miniScript, leftClass, Any::class, op, false)
-            ?: tryGetChanger(miniScript, Any::class, leftClass, op, false)
-            ?: tryGetChanger(miniScript, Any::class, Any::class, op, false)
+        return tryGetChangers(miniScript, rightClass, leftClass, op, false)
+            ?: tryGetChangers(miniScript, Any::class, rightClass, op, false)
+            ?: tryGetChangers(miniScript, rightClass, Any::class, op, false)
+            ?: tryGetChangers(miniScript, leftClass, Any::class, op, false)
+            ?: tryGetChangers(miniScript, Any::class, leftClass, op, false)
+            ?: tryGetChangers(miniScript, Any::class, Any::class, op, false)
 
     return null
 }

@@ -2,10 +2,12 @@ package me.honkling.miniscript.stdlib
 
 import me.honkling.miniscript.MiniScript
 import me.honkling.miniscript.diagnostic.MiniScriptException
+import me.honkling.miniscript.miniScript
 import me.honkling.miniscript.parser.ast.Operator.*
 import me.honkling.miniscript.parser.ast.function.Function
 import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.prototype.FunctionReference
+import me.honkling.miniscript.parser.ast.string.ComplexString
 
 fun registerChangers(miniScript: MiniScript) {
     miniScript.registerChanger<Any, Any, Boolean>(Equals, NotEquals) { lhs, rhs, op ->
@@ -39,18 +41,27 @@ fun registerChangers(miniScript: MiniScript) {
         }
     }
 
-    miniScript.registerChanger<String, Double, String>(Multiply) { lhs, rhs, op ->
-        val string = lhs as? String ?: rhs as String
+    val stringClass = miniScript.environment.stringClass
+    miniScript.registerClassChanger<Double, String>(stringClass, Multiply) { lhs, rhs, op ->
+        val stringInstance = lhs as? ClassInstance ?: rhs as ClassInstance
         val double = rhs as? Double ?: lhs as Double
 
         if (double.mod(1.0) != 0.0)
             throw MiniScriptException.RuntimeError("Can't repeat a string a non-integer amount of times", null)
 
+        val string = (stringInstance.fields["value"] as List<Char>).joinToString("")
         string.repeat(double.toInt())
     }
 
-    miniScript.registerChanger<String, Any, String>(Plus) { lhs, rhs, op ->
-        lhs.toString() + rhs.toString()
+    miniScript.registerClassChanger<Any, ClassInstance>(stringClass, Plus) { lhs, rhs, op ->
+        val classInstance = lhs as? ClassInstance ?: rhs as ClassInstance
+        val otherValue = if (classInstance == lhs) rhs else lhs
+        val stringValue = (classInstance.fields["value"] as List<Char>).joinToString("")
+        val otherString = if (otherValue is ClassInstance && otherValue.classRef == stringClass)
+            (otherValue.fields["value"] as List<Char>).joinToString("")
+        else otherValue.toString()
+
+        stringClass.instantiate(listOf(ComplexString.StringGetter(stringValue + otherString)))
     }
 
     miniScript.registerChanger<ArrayList<*>, ArrayList<*>, MutableList<*>>(Plus, Minus) { lhs, rhs, op ->

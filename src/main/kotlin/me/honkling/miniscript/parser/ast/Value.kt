@@ -5,7 +5,7 @@ import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.parser.ast.expression.Assignable
 import me.honkling.miniscript.parser.ast.expression.Expression
-import me.honkling.miniscript.parser.ast.expression.tryGetChanger
+import me.honkling.miniscript.parser.ast.expression.tryGetChangers
 import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.prototype.FunctionReference
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
@@ -65,11 +65,15 @@ abstract class Value<T>(location: Location, parent: Node<*>?) : Expression<T>(lo
                     val value = value
                         ?: 1.0
 
-                    val changer = tryGetChanger(miniScript, currentValue!!::class, value::class, operator)
+                    val changers = tryGetChangers(miniScript, currentValue!!::class, value::class, operator)
                         ?: throw MiniScriptException.RuntimeError("Couldn't find changer", this)
 
-                    val newValue = changer.block(currentValue, value, operator)
-                    parent?.setSymbol(this.value, newValue)
+                    for (changer in changers) {
+                        try {
+                            val newValue = changer.block(currentValue, value, operator)
+                            parent?.setSymbol(this.value, newValue)
+                        } catch (_: MiniScriptException.WrongChanger) {}
+                    }
                 }
                 else -> throw MiniScriptException.RuntimeError("Invalid operator ${type.name}", this)
             }
