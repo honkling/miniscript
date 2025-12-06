@@ -16,37 +16,27 @@ class Class(
     fields: MutableList<Field>,
     parent: Node<*>?
 ) : Prototype(name, fields, parent) {
-    init {
-        for (method in methods) {
-            method.parameters.add(0, Parameter("super", Type.Dictionary, null, false, method))
-            method.parameters.add(0, Parameter("this", Type.Dictionary, null, false, method))
-        }
-
-        fields += Field("super", Type.Dictionary, null, null)
-    }
-
-    fun instantiate(arguments: List<Expression<*>>): MutableMap<Any?, Any?> {
+    fun instantiate(arguments: List<Expression<*>>): ClassInstance {
         val instance = superClass?.instantiate(superArgs)
-            ?: mutableMapOf()
+            ?: ClassInstance(this)
 
-        val superRef = mutableMapOf(*instance.entries.map { it.key to it.value }
-            .toTypedArray())
-
-        for (method in methods)
-            instance[method.name!!] = method
-
-        for (field in fields)
-            field.value?.let { instance[field.name] = it.get().first }
+        instance.classRef = this
 
         for ((index, parameter) in constructorParameters.withIndex()) {
-            val value = (arguments.getOrNull(index) ?: parameter.defaultValue)
-                ?.get()?.first ?: continue
+            val defaultValue = parameter.defaultValue?.get()?.first
+            val value = arguments.getOrNull(index)?.get()?.first ?: defaultValue
+                ?: continue
 
-            instance[parameter.name!!] = value
+            if (parameter.name!! !in instance.fields || instance.fields[parameter.name] == defaultValue)
+                instance.fields[parameter.name] = value
         }
 
-        instance["super"] = superRef
         return instance
+    }
+
+    fun tryResolveFunction(name: Any?): Function? {
+        return methods.find { it.name == name }
+            ?: superClass?.tryResolveFunction(name)
     }
 
     override fun accept(pass: Pass) {

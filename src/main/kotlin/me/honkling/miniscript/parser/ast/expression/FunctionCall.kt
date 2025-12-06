@@ -6,6 +6,7 @@ import me.honkling.miniscript.parser.ast.Type
 import me.honkling.miniscript.parser.ast.Value
 import me.honkling.miniscript.parser.ast.function.Function
 import me.honkling.miniscript.parser.ast.prototype.Class
+import me.honkling.miniscript.parser.ast.prototype.FunctionReference
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 import me.honkling.miniscript.pass.Pass
 import kotlin.collections.plus
@@ -22,25 +23,14 @@ class FunctionCall(
         if (result is Class)
             return result.instantiate(arguments) to ExecutionResult.ContinueExecution
 
-        if ((result !is Pair<*, *> || result.second !is Function) && result !is Function)
+        if (result !is FunctionReference && (result as? Pair<*, *>)?.second !is FunctionReference)
             throw MiniScriptException.RuntimeError("Expected a function")
 
         val arguments = mutableListOf<Any>()
-        val function = (result as? Pair<Any, Function>)?.second ?: result as Function
+        val (instance, function) = (result as? Pair<Any, FunctionReference>)?.second ?: result as FunctionReference
 
-        if (function.parameters.firstOrNull()?.name == "this") {
-            // This function belongs to a class.
-            val instance = (result as Pair<MutableMap<Any?, Any?>, Function>).first
-            val superRef = instance["super"]!!
-
-            arguments += instance
-            arguments += superRef
-        }
-
-        var index = 0
-
-        for (parameter in function.parameters) {
-            if (index == 0 && (parameter.name == "this" || parameter.name == "super"))
+        for ((index, parameter) in function.parameters.withIndex()) {
+            if ((index == 0 && parameter.name == "this") || (index == 1 && parameter.name == "super"))
                 continue
 
             if (parameter.isVararg) {
@@ -49,11 +39,14 @@ class FunctionCall(
                 break
             }
 
-            arguments += this.arguments[index++].get().first
+            arguments += this.arguments[index].get().first
                 ?: throw MiniScriptException.RuntimeError("Expected argument value, found nothing")
         }
 
-        return function.call(*arguments.toTypedArray(), lambda = lambda) to ExecutionResult.ContinueExecution
+        val symbols = mutableMapOf<String, Any?>()
+        instance?.let { symbols["this"] = it }
+
+        return function.call(*arguments.toTypedArray(), lambda = lambda, symbols = symbols) to ExecutionResult.ContinueExecution
     }
 
     override fun accept(pass: Pass) {

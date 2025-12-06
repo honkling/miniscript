@@ -7,6 +7,7 @@ import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.miniScript
 import me.honkling.miniscript.parser.ast.Node
 import me.honkling.miniscript.parser.ast.Operator
+import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 import me.honkling.miniscript.pass.Pass
 import kotlin.collections.get
@@ -64,7 +65,10 @@ class Arithmetic(
         } else if (left is MutableMap<*, *>) {
             left as MutableMap<Any?, Any?>
             left[right] = value
-        }
+        } else if (left is ClassInstance)
+            left.fields[right] = value
+        else if (left is ClassInstance.SuperInstance)
+            left.instance.fields[right] = value
     }
 
     override fun accept(pass: Pass) {

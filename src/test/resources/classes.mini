@@ -8,7 +8,7 @@ class Test(a: number) {
 
 class TestInheritance(a: number, c: number) : Test(a) {
     func test() -> number {
-        return super.test() * c
+        return super.test() * this.c
     }
 }
 

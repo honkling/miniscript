@@ -63,7 +63,7 @@ class Parser(
         return when (token.type) {
             TokenType.Class -> parseClassDeclaration(parent)
             TokenType.Native, TokenType.Function -> parseFunctionDeclaration(parent)
-            TokenType.Identifier -> parseIdentifierExecutable(parent)
+            TokenType.This, TokenType.Super, TokenType.Identifier -> parseIdentifierExecutable(parent)
             TokenType.ForEach -> parseForEach(parent)
             TokenType.While -> parseWhile(parent)
             TokenType.Return -> parseReturn(parent)
@@ -442,7 +442,7 @@ class Parser(
             TokenType.String -> parseString(token as Token.WithValue<String>, parent)
             TokenType.Identifier -> Value.Variable(token.raw, parent)
             TokenType.This -> Value.Variable("this", parent)
-            TokenType.Super -> Value.Variable("super", parent)
+            TokenType.Super -> Value.Super(parent)
             TokenType.OpenBracket -> parseArray(parent)
             TokenType.OpenBrace -> {
                 val branch = stream.branch()

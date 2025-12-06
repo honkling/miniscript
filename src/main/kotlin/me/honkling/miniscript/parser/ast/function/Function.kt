@@ -15,7 +15,7 @@ class Function(
     val isLambda: Boolean,
     parent: Node<*>?
 ) : Node<Node<*>?>(parent) {
-    fun call(vararg arguments: Any, lambda: Function? = null): Any? {
+    fun call(vararg arguments: Any, lambda: Function? = null, symbols: Map<String, Any?> = emptyMap()): Any? {
         val parameterSize = parameters.size
         val argumentSize = arguments.size + if (lambda == null) 0 else 1
         if ((!isLambda && parameterSize != argumentSize) || parameterSize > argumentSize) {
@@ -41,6 +41,9 @@ class Function(
 
             frame.symbolTable[blockArgument.name!!] = lambda
         }
+
+        for ((key, value) in symbols)
+            frame.symbolTable[key] = value
 
         block!!.execute(false)
 

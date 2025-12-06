@@ -5,9 +5,11 @@ import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.parser.ast.expression.Assignable
 import me.honkling.miniscript.parser.ast.expression.Expression
 import me.honkling.miniscript.parser.ast.expression.tryGetChanger
+import me.honkling.miniscript.parser.ast.prototype.ClassInstance
+import me.honkling.miniscript.parser.ast.prototype.FunctionReference
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
-import me.honkling.miniscript.parser.ast.function.Function as MSFunction
 import me.honkling.miniscript.pass.Pass
+import me.honkling.miniscript.parser.ast.function.Function as MSFunction
 
 abstract class Value<T>(parent: Node<*>?) : Expression<T>(parent) {
     open class Simple<T : Any>(private val value: T, parent: Node<*>?) : Value<T>(parent) {
@@ -18,9 +20,23 @@ abstract class Value<T>(parent: Node<*>?) : Expression<T>(parent) {
     class Boolean(value: kotlin.Boolean, parent: Node<*>?) : Simple<kotlin.Boolean>(value,  parent)
     class Function(value: MSFunction, parent: Node<*>?) : Simple<MSFunction>(value, parent)
     class MemberAccess(value: String, parent: Node<*>?) : Simple<String>(value, parent)
+    class Super(parent: Node<*>?) : Value<Any?>(parent) {
+        override fun get(): Pair<Any?, ExecutionResult> {
+            val thisRef = parent?.getSymbol("this") as? ClassInstance
+                ?: return null to ExecutionResult.ContinueExecution
+
+            return ClassInstance.SuperInstance(thisRef) to ExecutionResult.ContinueExecution
+        }
+    }
+
     class Variable(private val value: String, parent: Node<*>?) : Value<Any?>(parent), Assignable {
         override fun get(): Pair<Any?, ExecutionResult> {
-            return parent?.getSymbol(value) to ExecutionResult.ContinueExecution
+            val value = parent?.getSymbol(value)
+
+            if (value is MSFunction)
+                return FunctionReference(null, value) to ExecutionResult.ContinueExecution
+
+            return value to ExecutionResult.ContinueExecution
         }
 
         override fun canAssign(): kotlin.Boolean {
