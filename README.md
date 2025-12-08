@@ -23,7 +23,16 @@ Feel free to suggest new features in the [Issues](https://github.com/honkling/mi
 - [x] Arithmetic
 - [x] Ternary expressions
 - [x] Classes
+- [ ] Import/export
 - [ ] AST validation pass
+  - [ ] Not all code branches return a value
+  - [ ] Validate return value type
+  - [ ] Validate parameter/argument types
+  - [ ] Validate variable accesses
+  - [ ] Validate field value type
+  - [ ] Validate vararg positioning
+  - [ ] Validate if/while statements returning a boolean
+  - [ ] Validate array indexes
 - [ ] Core standard library
   - [ ] Networking (http, tcp, ws)
   - [ ] Persistent data storage
