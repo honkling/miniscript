@@ -7,6 +7,7 @@ import me.honkling.miniscript.parser.ast.Node
 import me.honkling.miniscript.parser.ast.Operator
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 import me.honkling.miniscript.pass.Pass
+import me.honkling.miniscript.stdlib.tryGetChangers
 
 class UnaryOperator(
     val expression: Expression<*>,

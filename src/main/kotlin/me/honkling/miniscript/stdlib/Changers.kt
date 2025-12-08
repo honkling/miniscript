@@ -1,24 +1,28 @@
 package me.honkling.miniscript.stdlib
 
+import me.honkling.miniscript.Changer
 import me.honkling.miniscript.MiniScript
 import me.honkling.miniscript.diagnostic.MiniScriptException
+import me.honkling.miniscript.parser.ast.Operator
 import me.honkling.miniscript.parser.ast.Operator.*
 import me.honkling.miniscript.parser.ast.function.Function
 import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.prototype.FunctionReference
+import me.honkling.miniscript.parser.ast.stack.Environment
 import me.honkling.miniscript.parser.ast.string.ComplexString
+import kotlin.reflect.KClass
 
-fun registerChangers(miniScript: MiniScript) {
-    miniScript.registerChanger<Boolean, Unit, Boolean>(LogicalNOT) { lhs, rhs, op ->
+fun registerChangers(environment: Environment) {
+    environment.registerChanger<Boolean, Unit, Boolean>(LogicalNOT) { lhs, rhs, op ->
         !(lhs as Boolean)
     }
 
-    miniScript.registerChanger<Any, Any, Boolean>(Equals, NotEquals) { lhs, rhs, op ->
+    environment.registerChanger<Any, Any, Boolean>(Equals, NotEquals) { lhs, rhs, op ->
         if (op == Equals) lhs == rhs
         else lhs != rhs
     }
 
-    miniScript.registerChanger<Double, Double, Double>(Plus, Minus, Multiply, Divide) { lhs, rhs, op ->
+    environment.registerChanger<Double, Double, Double>(Plus, Minus, Multiply, Divide) { lhs, rhs, op ->
         lhs as Double
         rhs as Double
 
@@ -31,7 +35,7 @@ fun registerChangers(miniScript: MiniScript) {
         }
     }
 
-    miniScript.registerChanger<Double, Double, Boolean>(GreaterThan, GreaterEquals, LessThan, LessEquals) { lhs, rhs, op ->
+    environment.registerChanger<Double, Double, Boolean>(GreaterThan, GreaterEquals, LessThan, LessEquals) { lhs, rhs, op ->
         lhs as Double
         rhs as Double
 
@@ -44,8 +48,8 @@ fun registerChangers(miniScript: MiniScript) {
         }
     }
 
-    val stringClass = miniScript.environment.stringClass
-    miniScript.registerClassChanger<Double, String>(stringClass, Multiply) { lhs, rhs, op ->
+    val stringClass = environment.stringClass
+    environment.registerClassChanger<Double, String>(stringClass, Multiply) { lhs, rhs, op ->
         val stringInstance = lhs as? ClassInstance ?: rhs as ClassInstance
         val double = rhs as? Double ?: lhs as Double
 
@@ -56,7 +60,7 @@ fun registerChangers(miniScript: MiniScript) {
         string.repeat(double.toInt())
     }
 
-    miniScript.registerClassChanger<Any, ClassInstance>(stringClass, Plus) { lhs, rhs, op ->
+    environment.registerClassChanger<Any, ClassInstance>(stringClass, Plus) { lhs, rhs, op ->
         val classInstance = lhs as? ClassInstance ?: rhs as ClassInstance
         val leftSideIsClass = classInstance == lhs
         val otherValue = if (leftSideIsClass) rhs else lhs
@@ -71,7 +75,7 @@ fun registerChangers(miniScript: MiniScript) {
         )))
     }
 
-    miniScript.registerChanger<ArrayList<*>, ArrayList<*>, MutableList<*>>(Plus, Minus) { lhs, rhs, op ->
+    environment.registerChanger<ArrayList<*>, ArrayList<*>, MutableList<*>>(Plus, Minus) { lhs, rhs, op ->
         lhs as ArrayList<*>
         rhs as ArrayList<*>
 
@@ -84,7 +88,7 @@ fun registerChangers(miniScript: MiniScript) {
         }
     }
 
-    miniScript.registerChanger<ArrayList<*>, Any?, MutableList<*>>(Plus, Minus, priority = -10) { lhs, rhs, op ->
+    environment.registerChanger<ArrayList<*>, Any?, MutableList<*>>(Plus, Minus, priority = -10) { lhs, rhs, op ->
         val array = lhs as? ArrayList<*> ?: rhs as ArrayList<*>
         val other = if (array === lhs) rhs else lhs
 
@@ -96,12 +100,12 @@ fun registerChangers(miniScript: MiniScript) {
         clone
     }
 
-    miniScript.registerChanger<LinkedHashMap<*, *>, Any?, Any?>(Period) { lhs, rhs, op ->
+    environment.registerChanger<LinkedHashMap<*, *>, Any?, Any?>(Period) { lhs, rhs, op ->
         lhs as LinkedHashMap<*, *>
         lhs[rhs]
     }
 
-    miniScript.registerChanger<ArrayList<*>, Double, Any>(Period) { lhs, rhs, op ->
+    environment.registerChanger<ArrayList<*>, Double, Any>(Period) { lhs, rhs, op ->
         lhs as ArrayList<*>
         rhs as Double
 
@@ -111,7 +115,7 @@ fun registerChangers(miniScript: MiniScript) {
         lhs[rhs.toInt()]!!
     }
 
-    miniScript.registerChanger<ClassInstance, Any?, Any?>(Period) { lhs, rhs, op ->
+    environment.registerChanger<ClassInstance, Any?, Any?>(Period) { lhs, rhs, op ->
         lhs as ClassInstance
 
         lhs.classRef.tryResolveFunction(rhs)?.let { FunctionReference(lhs, it) }
@@ -119,10 +123,29 @@ fun registerChangers(miniScript: MiniScript) {
             ?: lhs.fields[rhs]
     }
 
-    miniScript.registerChanger<ClassInstance.SuperInstance, Any?, Any?>(Period) { lhs, rhs, op ->
+    environment.registerChanger<ClassInstance.SuperInstance, Any?, Any?>(Period) { lhs, rhs, op ->
         lhs as ClassInstance.SuperInstance
 
         lhs.instance.classRef.superClass?.tryResolveFunction(rhs)?.let { FunctionReference(lhs.instance, it) }
             ?: lhs.instance.fields[rhs]
     }
+}
+
+fun tryGetChangers(miniScript: MiniScript, leftClass: KClass<*>, rightClass: KClass<*>, op: Operator, tryVariant: Boolean = true): List<Changer<*>>? {
+    val changers = miniScript.environment.changers
+
+    changers[leftClass]?.get(rightClass)
+        ?.sortedBy { it.priority }
+        ?.filter { op in it.validOperators }
+        ?.let { return it }
+
+    if (tryVariant)
+        return tryGetChangers(miniScript, leftClass, Any::class, op, false)
+            ?: tryGetChangers(miniScript, Any::class, rightClass, op, false)
+            ?: tryGetChangers(miniScript, rightClass, Any::class, op, false)
+            ?: tryGetChangers(miniScript, rightClass, leftClass, op, false)
+            ?: tryGetChangers(miniScript, Any::class, leftClass, op, false)
+            ?: tryGetChangers(miniScript, Any::class, Any::class, op, false)
+
+    return null
 }

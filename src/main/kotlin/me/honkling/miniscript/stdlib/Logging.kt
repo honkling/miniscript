@@ -10,6 +10,6 @@ fun registerStdlibLogging(miniScript: MiniScript, symbols: SymbolTable) {
     val print = symbols["print"] as Function
     print.block = nativeBlock(miniScript, print) {
         val message = getSymbol("message")
-        println(miniScript.stringifyValue(message))
+        println(miniScript.environment.stringifyValue(message))
     }
 }

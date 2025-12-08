@@ -11,6 +11,7 @@ import me.honkling.miniscript.parser.ast.Operator
 import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 import me.honkling.miniscript.pass.Pass
+import me.honkling.miniscript.stdlib.tryGetChangers
 import kotlin.collections.get
 import kotlin.reflect.KClass
 
@@ -122,25 +123,6 @@ fun evaluateArithmetic(miniScript: MiniScript, node: Arithmetic, left: Any?, rig
             return changer.block(left, right, operator)
         } catch (_: MiniScriptException.WrongChanger) {}
     }
-
-    return null
-}
-
-fun tryGetChangers(miniScript: MiniScript, leftClass: KClass<*>, rightClass: KClass<*>, op: Operator, tryVariant: Boolean = true): List<Changer<*>>? {
-    val changers = miniScript.changers
-
-    changers[leftClass]?.get(rightClass)
-        ?.sortedBy { it.priority }
-        ?.filter { op in it.validOperators }
-        ?.let { return it }
-
-    if (tryVariant)
-        return tryGetChangers(miniScript, leftClass, Any::class, op, false)
-            ?: tryGetChangers(miniScript, Any::class, rightClass, op, false)
-            ?: tryGetChangers(miniScript, rightClass, Any::class, op, false)
-            ?: tryGetChangers(miniScript, rightClass, leftClass, op, false)
-            ?: tryGetChangers(miniScript, Any::class, leftClass, op, false)
-            ?: tryGetChangers(miniScript, Any::class, Any::class, op, false)
 
     return null
 }

@@ -5,11 +5,11 @@ import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.parser.ast.expression.Assignable
 import me.honkling.miniscript.parser.ast.expression.Expression
-import me.honkling.miniscript.parser.ast.expression.tryGetChangers
 import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.prototype.FunctionReference
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 import me.honkling.miniscript.pass.Pass
+import me.honkling.miniscript.stdlib.tryGetChangers
 import me.honkling.miniscript.parser.ast.function.Function as MSFunction
 
 abstract class Value<T>(location: Location, parent: Node<*>?) : Expression<T>(location, parent) {
