@@ -30,6 +30,7 @@ Feel free to suggest new features in the [Issues](https://github.com/honkling/mi
   - [ ] Files
   - [ ] Locale (time/date, language)
   - [x] Primitive utilities
+    - [ ] Array utilities
 - [ ] Minecraft plugin implementation
   - [ ] Skeleton implementation
   - [ ] Standard library for Minecraft
