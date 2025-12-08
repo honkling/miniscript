@@ -23,6 +23,7 @@ Feel free to suggest new features in the [Issues](https://github.com/honkling/mi
 - [x] Arithmetic
 - [x] Ternary expressions
 - [x] Classes
+- [ ] AST validation pass
 - [ ] Core standard library
   - [ ] Networking (http, tcp, ws)
   - [ ] Persistent data storage
