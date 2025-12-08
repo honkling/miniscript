@@ -21,6 +21,7 @@ import me.honkling.miniscript.parser.ast.expression.NativeExpression
 import me.honkling.miniscript.parser.ast.statement.Loop
 import me.honkling.miniscript.parser.ast.statement.NativeStatement
 import me.honkling.miniscript.parser.ast.expression.Return
+import me.honkling.miniscript.parser.ast.expression.UnaryOperator
 
 abstract class Pass {
     open fun visit(node: Node<*>) {
@@ -47,4 +48,5 @@ abstract class Pass {
     open fun visitClass(node: Class) {}
     open fun visitField(node: Field) {}
     open fun visitArithmetic(node: Arithmetic) {}
+    open fun visitUnary(node: UnaryOperator) {}
 }

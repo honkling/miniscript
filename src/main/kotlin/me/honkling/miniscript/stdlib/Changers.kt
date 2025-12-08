@@ -2,7 +2,6 @@ package me.honkling.miniscript.stdlib
 
 import me.honkling.miniscript.MiniScript
 import me.honkling.miniscript.diagnostic.MiniScriptException
-import me.honkling.miniscript.miniScript
 import me.honkling.miniscript.parser.ast.Operator.*
 import me.honkling.miniscript.parser.ast.function.Function
 import me.honkling.miniscript.parser.ast.prototype.ClassInstance
@@ -10,6 +9,10 @@ import me.honkling.miniscript.parser.ast.prototype.FunctionReference
 import me.honkling.miniscript.parser.ast.string.ComplexString
 
 fun registerChangers(miniScript: MiniScript) {
+    miniScript.registerChanger<Boolean, Unit, Boolean>(LogicalNOT) { lhs, rhs, op ->
+        !(lhs as Boolean)
+    }
+
     miniScript.registerChanger<Any, Any, Boolean>(Equals, NotEquals) { lhs, rhs, op ->
         if (op == Equals) lhs == rhs
         else lhs != rhs
@@ -55,13 +58,17 @@ fun registerChangers(miniScript: MiniScript) {
 
     miniScript.registerClassChanger<Any, ClassInstance>(stringClass, Plus) { lhs, rhs, op ->
         val classInstance = lhs as? ClassInstance ?: rhs as ClassInstance
-        val otherValue = if (classInstance == lhs) rhs else lhs
+        val leftSideIsClass = classInstance == lhs
+        val otherValue = if (leftSideIsClass) rhs else lhs
         val stringValue = (classInstance.fields["value"] as List<Char>).joinToString("")
         val otherString = if (otherValue is ClassInstance && otherValue.classRef == stringClass)
             (otherValue.fields["value"] as List<Char>).joinToString("")
         else otherValue.toString()
 
-        stringClass.instantiate(listOf(ComplexString.StringGetter(stringValue + otherString)))
+        stringClass.instantiate(listOf(ComplexString.StringGetter(
+            if (leftSideIsClass) stringValue + otherString
+            else otherString + stringValue
+        )))
     }
 
     miniScript.registerChanger<ArrayList<*>, ArrayList<*>, MutableList<*>>(Plus, Minus) { lhs, rhs, op ->
@@ -77,7 +84,7 @@ fun registerChangers(miniScript: MiniScript) {
         }
     }
 
-    miniScript.registerChanger<ArrayList<*>, Any?, MutableList<*>>(Plus, Minus) { lhs, rhs, op ->
+    miniScript.registerChanger<ArrayList<*>, Any?, MutableList<*>>(Plus, Minus, priority = -10) { lhs, rhs, op ->
         val array = lhs as? ArrayList<*> ?: rhs as ArrayList<*>
         val other = if (array === lhs) rhs else lhs
 

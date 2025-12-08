@@ -47,7 +47,7 @@ abstract class Loop(val block: Block, location: Location, parent: Block) : State
             var result = expression.get().first
 
             if (result !is Boolean)
-                throw MiniScriptException.RuntimeError("Expected boolean for while statement", this)
+                throw MiniScriptException.RuntimeError("Expected boolean for while statement, got '$result'", this)
 
             while (result == true) {
                 when (block.execute().second) {

@@ -1,4 +1,10 @@
 class String(value: char[]) {
+    length: number
+
+    init {
+        this.length = sizeof(this.value)
+    }
+
     func substring(from: number, to: number) -> String {
         new_chars = []
         index = from
@@ -9,5 +15,83 @@ class String(value: char[]) {
         }
 
         return String(new_chars)
+    }
+
+    func replace(old: String, new: String) -> String {
+        new_chars = []
+        index = 0
+
+        print("Length: " + (index < this.length))
+
+        while (index < this.length) {
+            character = this.value[index]
+
+            if (character == old.value[0]) {
+                start = index
+                is_occurrence = true
+                index++
+
+                while (index - start < old.length) {
+                    if (this.value[index] != old.value[index - start]) {
+                        is_occurrence = false
+                        break
+                    }
+
+                    index++
+                }
+
+                if (!is_occurrence) {
+                    new_chars += this.value[start]
+                    index = start + 1
+                    continue
+                }
+
+                new_chars += new.value
+                continue
+            }
+
+            new_chars += character
+            index++
+        }
+
+        return String(new_chars)
+    }
+
+    func split(delimiter: String) -> String[] {
+        chunks = []
+        index = 0
+        last_occurrence = 0
+
+        while (index < this.length) {
+            if (this.value[index] == delimiter.value[0]) {
+                start = index
+                is_occurrence = true
+                index++
+
+                while (index - start < delimiter.length) {
+                    if (this.value[index] != delimiter.value[index - start]) {
+                        is_occurrence = false
+                        break
+                    }
+
+                    index++
+                }
+
+                if (!is_occurrence) {
+                    index = start + 1
+                    continue
+                }
+
+                chunks += this.substring(last_occurrence, start)
+                last_occurrence = index + 1
+                index++
+                continue
+            }
+
+            index++
+        }
+
+        chunks += this.substring(last_occurrence, index)
+        return chunks
     }
 }

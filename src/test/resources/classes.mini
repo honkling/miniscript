@@ -15,3 +15,4 @@ class TestInheritance(a: number, c: number) : Test(a) {
 ins = TestInheritance(20, 10)
 ins.b = 10
 print(ins.test())
+print(ins)

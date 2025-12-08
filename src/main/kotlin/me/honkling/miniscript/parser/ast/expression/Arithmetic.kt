@@ -58,19 +58,51 @@ class Arithmetic(
         val left = left.get().first
         val right = right.get().first
 
+        val miniScript = getBlockParent()!!.miniScript
+        val newValue = when (operator) {
+            TokenType.Assign -> value
+            TokenType.PlusAssign, TokenType.MinusAssign,
+            TokenType.MultiplyAssign, TokenType.DivideAssign,
+            TokenType.Increment, TokenType.Decrement -> {
+                val currentValue = evaluateArithmetic(miniScript, this, left, right, this.operator)
+                    ?: throw MiniScriptException.RuntimeError("Expected left hand value", this)
+
+                val operator = when (operator) {
+                    TokenType.PlusAssign, TokenType.Increment -> Operator.Plus
+                    TokenType.MinusAssign, TokenType.Decrement -> Operator.Minus
+                    TokenType.MultiplyAssign -> Operator.Multiply
+                    TokenType.DivideAssign -> Operator.Divide
+                    else -> throw IllegalStateException("Invalid operator for variable")
+                }
+
+                val value = value
+                    ?: 1.0
+
+                val changers = tryGetChangers(miniScript, currentValue!!::class, value::class, operator)
+                    ?: throw MiniScriptException.RuntimeError("Couldn't find changer", this)
+
+                changers.firstNotNullOfOrNull {
+                    try {
+                        it.block(currentValue, value, operator)
+                    } catch (_: MiniScriptException.WrongChanger) {}
+                } ?: throw MiniScriptException.RuntimeError("No changers returned a value", this)
+            }
+            else -> throw MiniScriptException.RuntimeError("Invalid operator ${operator.name}", this)
+        }
+
         if (left is MutableList<*>) {
             if (right !is Double)
                 throw MiniScriptException.RuntimeError("Expected integer index for array", this)
 
             left as MutableList<Any?>
-            left[right.toInt()] = value
+            left[right.toInt()] = newValue
         } else if (left is MutableMap<*, *>) {
             left as MutableMap<Any?, Any?>
-            left[right] = value
+            left[right] = newValue
         } else if (left is ClassInstance)
-            left.fields[right] = value
+            left.fields[right] = newValue
         else if (left is ClassInstance.SuperInstance)
-            left.instance.fields[right] = value
+            left.instance.fields[right] = newValue
     }
 
     override fun accept(pass: Pass) {
@@ -98,14 +130,15 @@ fun tryGetChangers(miniScript: MiniScript, leftClass: KClass<*>, rightClass: KCl
     val changers = miniScript.changers
 
     changers[leftClass]?.get(rightClass)
+        ?.sortedBy { it.priority }
         ?.filter { op in it.validOperators }
         ?.let { return it }
 
     if (tryVariant)
-        return tryGetChangers(miniScript, rightClass, leftClass, op, false)
+        return tryGetChangers(miniScript, leftClass, Any::class, op, false)
             ?: tryGetChangers(miniScript, Any::class, rightClass, op, false)
             ?: tryGetChangers(miniScript, rightClass, Any::class, op, false)
-            ?: tryGetChangers(miniScript, leftClass, Any::class, op, false)
+            ?: tryGetChangers(miniScript, rightClass, leftClass, op, false)
             ?: tryGetChangers(miniScript, Any::class, leftClass, op, false)
             ?: tryGetChangers(miniScript, Any::class, Any::class, op, false)
 

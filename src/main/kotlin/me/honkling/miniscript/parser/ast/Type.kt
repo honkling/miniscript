@@ -6,7 +6,7 @@ import me.honkling.miniscript.pass.Pass
 import me.honkling.miniscript.parser.ast.function.Function as MSFunction
 import me.honkling.miniscript.parser.ast.prototype.Class as MSClass
 
-abstract class Type<T> : Node<Nothing?>(null, null) {
+abstract class Type<T>(parent: Node<*>? = null) : Node<Node<*>?>(null, parent) {
     object Char : Type<kotlin.Char>()
     object Number : Type<kotlin.Number>()
     object Boolean : Type<kotlin.Boolean>()
@@ -14,7 +14,7 @@ abstract class Type<T> : Node<Nothing?>(null, null) {
     object Dictionary : Type<HashMap<Any?, Any?>>()
     object Void : Type<Nothing?>()
     object Any : Type<Any>()
-    class Class(val reference: Expression<*>) : Type<MSClass>()
+    class Class(val reference: Expression<*>, parent: Node<*>?) : Type<MSClass>(parent)
     class Function(
         val parameters: List<Parameter>,
         val returnType: Type<*>

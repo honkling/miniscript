@@ -1,6 +1,7 @@
 package me.honkling.miniscript.parser.ast.prototype
 
 import me.honkling.miniscript.diagnostic.Location
+import me.honkling.miniscript.parser.ast.Block
 import me.honkling.miniscript.parser.ast.Node
 import me.honkling.miniscript.parser.ast.Type
 import me.honkling.miniscript.parser.ast.expression.Expression
@@ -13,6 +14,7 @@ class Class(
     var superClass: Class?,
     val superArgs: List<Expression<*>>,
     val methods: List<Function>,
+    val initializer: Block?,
     val constructorParameters: List<Parameter>,
     fields: MutableList<Field>,
     location: Location,
@@ -24,13 +26,26 @@ class Class(
 
         instance.classRef = this
 
-        for ((index, parameter) in constructorParameters.withIndex()) {
-            val defaultValue = parameter.defaultValue?.get()?.first
-            val value = arguments.getOrNull(index)?.get()?.first ?: defaultValue
+        for (field in fields) {
+            val value = field.value?.get()?.first
                 ?: continue
 
-            if (parameter.name!! !in instance.fields || instance.fields[parameter.name] == defaultValue)
-                instance.fields[parameter.name] = value
+            instance.fields[field.name] = value
+        }
+
+        for ((index, parameter) in constructorParameters.withIndex()) {
+            val value = arguments.getOrNull(index)?.get()?.first
+                ?: parameter.defaultValue?.get()?.first
+                ?: continue
+
+            instance.fields[parameter.name] = value
+        }
+
+        if (initializer != null) {
+            val frame = initializer.pushToStack()
+            frame.symbolTable["this"] = instance
+            initializer.execute(false)
+            initializer.popFromStack()
         }
 
         return instance

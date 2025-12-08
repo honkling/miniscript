@@ -28,8 +28,10 @@ open class Block(
                 is Expression<*> -> {
                     val result = statement.get()
 
-                    if (isLast)
-                        return result
+                    if (result.second != ExecutionResult.ContinueExecution) {
+                        if (pushStack) popFromStack()
+                        return if (isLast) result else null to result.second
+                    }
                 }
                 is Statement -> {
                     val result = statement.execute()

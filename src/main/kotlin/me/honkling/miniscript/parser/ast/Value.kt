@@ -22,8 +22,8 @@ abstract class Value<T>(location: Location, parent: Node<*>?) : Expression<T>(lo
     class Boolean(value: kotlin.Boolean, location: Location, parent: Node<*>?) : Simple<kotlin.Boolean>(value,  location, parent)
     class Function(value: MSFunction, location: Location, parent: Node<*>?) : Simple<MSFunction>(value, location, parent)
     class MemberAccess(value: String, location: Location, parent: Node<*>?) : Simple<String>(value, location, parent)
-    class Super(location: Location, parent: Node<*>?) : Value<Any?>(location, parent) {
-        override fun get(): Pair<Any?, ExecutionResult> {
+    class Super(location: Location, parent: Node<*>?) : Value<ClassInstance.SuperInstance?>(location, parent) {
+        override fun get(): Pair<ClassInstance.SuperInstance?, ExecutionResult> {
             val thisRef = parent?.getSymbol("this") as? ClassInstance
                 ?: return null to ExecutionResult.ContinueExecution
 

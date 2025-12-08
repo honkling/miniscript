@@ -13,16 +13,20 @@ import me.honkling.miniscript.parser.ast.SymbolTable
 import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.stack.Environment
 import me.honkling.miniscript.stdlib.registerChangers
+import me.honkling.miniscript.stdlib.registerStdlibArrays
 import me.honkling.miniscript.stdlib.registerStdlibLocale
 import me.honkling.miniscript.stdlib.registerStdlibLogging
 import me.honkling.miniscript.stdlib.registerStdlibLoops
+import me.honkling.miniscript.stdlib.registerStringHandlers
 import me.honkling.miniscript.parser.ast.prototype.Class as MSClass
 import java.io.File
 import kotlin.reflect.KClass
 
+typealias StringHandlerBlock<T> = (value: T) -> String
 typealias ChangerBlock<F, S, R> = (lhs: F, rhs: S, op: Operator) -> R
 data class Changer<R>(
     val validOperators: Set<Operator>,
+    val priority: Int,
     val block: ChangerBlock<Any?, Any?, R>
 )
 
@@ -30,10 +34,12 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
     val hasStandardLibrary = configuration.hasStandardLibrary
     val environment = Environment(this)
     val changers = mutableMapOf<KClass<*>, MutableMap<KClass<*>, MutableList<Changer<*>>>>()
+    val stringHandlers = mutableMapOf<KClass<*>, StringHandlerBlock<*>>()
 
     init {
         if (hasStandardLibrary) {
 //            evaluateResource("stdlib/files.mini")
+            evaluateResource("stdlib/arrays.mini", ::registerStdlibArrays)
             evaluateResource("stdlib/strings.mini")
             evaluateResource("stdlib/logging.mini", ::registerStdlibLogging)
             evaluateResource("stdlib/loops.mini", ::registerStdlibLoops)
@@ -41,27 +47,30 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
             environment.resolveReferences()
 
             registerChangers(this)
+            registerStringHandlers(this)
         }
     }
 
     inline fun <reified F, reified S, reified R> registerChanger(
         vararg validOperators: Operator,
+        priority: Int = 0,
         noinline block: ChangerBlock<Any?, Any?, R>
     ) {
         val first = changers.getOrPut(F::class, ::mutableMapOf)
         val second = first.getOrPut(S::class, ::mutableListOf)
-        second += Changer(validOperators.toSet(), block)
+        second += Changer(validOperators.toSet(), priority, block)
     }
 
     inline fun <reified R> registerClassChanger(
         classOne: MSClass,
         classTwo: MSClass,
         vararg validOperators: Operator,
+        priority: Int = 0,
         noinline block: ChangerBlock<ClassInstance, ClassInstance, R>
     ) {
         val first = changers.getOrPut(ClassInstance::class, ::mutableMapOf)
         val second = first.getOrPut(ClassInstance::class, ::mutableListOf)
-        second += Changer(validOperators.toSet()) { lhs, rhs, op ->
+        second += Changer(validOperators.toSet(), priority) { lhs, rhs, op ->
             lhs as ClassInstance
             rhs as ClassInstance
 
@@ -75,11 +84,12 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
     inline fun <reified O, reified R> registerClassChanger(
         `class`: MSClass,
         vararg validOperators: Operator,
+        priority: Int = 0,
         noinline block: ChangerBlock<Any?, Any?, R>
     ) {
         val first = changers.getOrPut(ClassInstance::class, ::mutableMapOf)
         val second = first.getOrPut(O::class, ::mutableListOf)
-        second += Changer(validOperators.toSet()) { lhs, rhs, op ->
+        second += Changer(validOperators.toSet(), priority) { lhs, rhs, op ->
             val classInstance = lhs as? ClassInstance ?: rhs as ClassInstance
 
             if (classInstance.classRef != `class`)
@@ -87,6 +97,20 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
 
             block(lhs, rhs, op)
         }
+    }
+
+    inline fun <reified T : Any> registerStringHandler(noinline block: StringHandlerBlock<T>) {
+        stringHandlers[T::class] = block
+    }
+
+    fun <T> stringifyValue(value: T): String {
+        if (value == null)
+            return "null"
+
+        val stringHandler = stringHandlers[value::class] as StringHandlerBlock<T>?
+            ?: return value.toString()
+
+        return stringHandler.invoke(value)
     }
 
     protected fun evaluateResource(name: String, registrar: (MiniScript, SymbolTable) -> Unit = { _, _ -> }) {
@@ -113,8 +137,11 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
         val diagnosticSize = diagnostics.size
         val word = if (diagnosticSize == 1) "diagnostic" else "diagnostics"
 
-        if (!internalMode) {
-            println("Found $diagnosticSize $word.")
+        val errorCount = logger.diagnostics.count { it.type == DiagnosticType.Error }
+        if (!internalMode || errorCount > 0) {
+            println(if (internalMode)
+                "Found $diagnosticSize $word while initalizing MiniScript's standard library(${file.name})"
+            else "Found $diagnosticSize $word.")
 
             for (diagnostic in logger.diagnostics) {
                 val location = diagnostic.location

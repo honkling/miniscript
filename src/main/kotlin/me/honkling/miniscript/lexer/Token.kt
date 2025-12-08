@@ -74,6 +74,7 @@ enum class TokenType(val value: String? = null) {
     Class("class"),
     This("this"),
     Super("super"),
+    Init("init"),
 
     Number,
     Boolean,
@@ -109,5 +110,6 @@ enum class TokenType(val value: String? = null) {
     Plus("+"),
     Minus("-"),
     Multiply("*"),
-    Divide("/")
+    Divide("/"),
+    Bang("!")
 }
