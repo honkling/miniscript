@@ -1,6 +1,7 @@
 package me.honkling.miniscript.parser.ast
 
 import me.honkling.miniscript.diagnostic.Location
+import me.honkling.miniscript.parser.ast.stack.Environment
 import me.honkling.miniscript.pass.Pass
 import kotlin.reflect.KClass
 
@@ -17,7 +18,7 @@ abstract class Node<T>(
         = (parent as? Block) ?: (parent as Node<*>?)?.getBlockParent()
 
     fun getSymbol(name: String): Any? {
-        val environment = getBlockParent()!!.miniScript.environment
+        val environment = if (this is Environment) this else getBlockParent()!!.miniScript.environment
 
         for (index in environment.executionStack.size - 1 downTo 0) {
             val frame = environment.executionStack[index]
@@ -30,7 +31,7 @@ abstract class Node<T>(
     }
 
     fun setSymbol(name: String, value: Any?) {
-        val miniScript = getBlockParent()!!.miniScript
+        val miniScript = if (this is Environment) miniScript else getBlockParent()!!.miniScript
         val executionStack = miniScript.environment.executionStack
         var foundSymbol = false
 

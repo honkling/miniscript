@@ -2,7 +2,7 @@ class String(value: char[]) {
     length: number
 
     init {
-        this.length = sizeof(this.value)
+        this.length = this.value.size
     }
 
     func substring(from: number, to: number) -> String {
@@ -20,8 +20,6 @@ class String(value: char[]) {
     func replace(old: String, new: String) -> String {
         new_chars = []
         index = 0
-
-        print("Length: " + (index < this.length))
 
         while (index < this.length) {
             character = this.value[index]

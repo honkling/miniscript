@@ -5,9 +5,12 @@ import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.parser.ast.expression.Assignable
 import me.honkling.miniscript.parser.ast.expression.Expression
+import me.honkling.miniscript.parser.ast.expression.NativeExpression
+import me.honkling.miniscript.parser.ast.prototype.Class
 import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.prototype.FunctionReference
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
+import me.honkling.miniscript.parser.ast.statement.NativeStatement
 import me.honkling.miniscript.pass.Pass
 import me.honkling.miniscript.stdlib.tryGetChangers
 import me.honkling.miniscript.parser.ast.function.Function as MSFunction
@@ -65,7 +68,7 @@ abstract class Value<T>(location: Location, parent: Node<*>?) : Expression<T>(lo
                     val value = value
                         ?: 1.0
 
-                    val changers = tryGetChangers(miniScript, currentValue!!::class, value::class, operator)
+                    val changers = tryGetChangers(miniScript, currentValue!!, value, currentValue::class, value::class, operator)
                         ?: throw MiniScriptException.RuntimeError("Couldn't find changer", this)
 
                     for (changer in changers) {
@@ -80,14 +83,15 @@ abstract class Value<T>(location: Location, parent: Node<*>?) : Expression<T>(lo
         }
     }
 
-    class Array(private val elements: List<Expression<*>>, location: Location, parent: Node<*>?) : Value<List<Any?>>(location, parent) {
-        override fun get(): Pair<List<Any?>, ExecutionResult> {
+    class Array(private val elements: List<Expression<*>>, location: Location, parent: Node<*>?) : Value<ClassInstance>(location, parent) {
+        override fun get(): Pair<ClassInstance, ExecutionResult> {
             val values = mutableListOf<Any?>()
 
             for (element in elements)
                 element.get().first?.let { values += it }
 
-            return values to ExecutionResult.ContinueExecution
+            val arrayClass = getBlockParent()!!.miniScript.environment.arrayClass
+            return arrayClass.instantiate(values) to ExecutionResult.ContinueExecution
         }
     }
 

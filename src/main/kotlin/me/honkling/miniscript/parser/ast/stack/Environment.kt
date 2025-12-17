@@ -20,10 +20,12 @@ class Environment(val miniScript: MiniScript) : Node<Nothing?>(null, null) {
     val changers = mutableMapOf<KClass<*>, MutableMap<KClass<*>, MutableList<Changer<*>>>>()
     val stringHandlers = mutableMapOf<KClass<*>, StringHandlerBlock<*>>()
     lateinit var stringClass: Class; private set
+    lateinit var arrayClass: Class; private set
 
     fun resolveReferences() {
         val symbolTable = executionStack[0].symbolTable
         stringClass = symbolTable["String"] as Class
+        arrayClass = symbolTable["Array"] as Class
     }
 
     inline fun <reified F, reified S, reified R> registerChanger(
@@ -33,7 +35,7 @@ class Environment(val miniScript: MiniScript) : Node<Nothing?>(null, null) {
     ) {
         val first = changers.getOrPut(F::class, ::mutableMapOf)
         val second = first.getOrPut(S::class, ::mutableListOf)
-        second += Changer(validOperators.toSet(), priority, block)
+        second += Changer(validOperators.toSet(), priority, null, null, block)
     }
 
     inline fun <reified R> registerClassChanger(
@@ -45,12 +47,12 @@ class Environment(val miniScript: MiniScript) : Node<Nothing?>(null, null) {
     ) {
         val first = changers.getOrPut(ClassInstance::class, ::mutableMapOf)
         val second = first.getOrPut(ClassInstance::class, ::mutableListOf)
-        second += Changer(validOperators.toSet(), priority) { lhs, rhs, op ->
+        second += Changer(validOperators.toSet(), priority, classOne, classTwo) { lhs, rhs, op ->
             lhs as ClassInstance
             rhs as ClassInstance
 
-            if ((lhs.classRef != classOne && lhs.classRef != classTwo) || (rhs.classRef != classOne && rhs.classRef != classTwo))
-                throw MiniScriptException.WrongChanger()
+//            if ((lhs.classRef != classOne && lhs.classRef != classTwo) || (rhs.classRef != classOne && rhs.classRef != classTwo))
+//                throw MiniScriptException.WrongChanger()
 
             block(lhs, rhs, op)
         }
@@ -64,7 +66,7 @@ class Environment(val miniScript: MiniScript) : Node<Nothing?>(null, null) {
     ) {
         val first = changers.getOrPut(ClassInstance::class, ::mutableMapOf)
         val second = first.getOrPut(O::class, ::mutableListOf)
-        second += Changer(validOperators.toSet(), priority) { lhs, rhs, op ->
+        second += Changer(validOperators.toSet(), priority, `class`, null) { lhs, rhs, op ->
             val classInstance = lhs as? ClassInstance ?: rhs as ClassInstance
 
             if (classInstance.classRef != `class`)

@@ -21,6 +21,20 @@ class Class(
     parent: Node<*>?
 ) : Prototype(name, fields, location, parent) {
     fun instantiate(arguments: List<Expression<*>>): ClassInstance {
+        val values = mutableListOf<Any>()
+
+        for ((index, parameter) in constructorParameters.withIndex()) {
+            val value = arguments.getOrNull(index)?.get()?.first
+                ?: parameter.defaultValue?.get()?.first
+                ?: continue
+
+            values += value
+        }
+
+        return instantiate(*values.toTypedArray())
+    }
+
+    fun instantiate(vararg arguments: Any): ClassInstance {
         val instance = superClass?.instantiate(superArgs)
             ?: ClassInstance(this)
 
@@ -33,13 +47,8 @@ class Class(
             instance.fields[field.name] = value
         }
 
-        for ((index, parameter) in constructorParameters.withIndex()) {
-            val value = arguments.getOrNull(index)?.get()?.first
-                ?: parameter.defaultValue?.get()?.first
-                ?: continue
-
-            instance.fields[parameter.name] = value
-        }
+        for ((index, parameter) in constructorParameters.withIndex())
+            instance.fields[parameter.name] = arguments[index]
 
         if (initializer != null) {
             val frame = initializer.pushToStack()

@@ -11,18 +11,17 @@ import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 
 class ComplexString(val components: MutableList<Component>, location: Location, parent: Node<*>?) : Value<ClassInstance>(location, parent) {
-    class StringGetter(val string: String) : NativeExpression<MutableList<Char>>({
-        string.toMutableList() to ExecutionResult.ContinueExecution
-    })
-
     override fun get(): Pair<ClassInstance, ExecutionResult> {
         val builder = StringBuilder()
 
         for (component in components)
             builder.append(component.get().first)
 
+        val environment = getBlockParent()!!.miniScript.environment
+        val stringClass = environment.stringClass
+        val arrayClass = environment.arrayClass
 
-        val stringClass = getBlockParent()!!.miniScript.environment.executionStack[0].symbolTable["String"] as Class
-        return stringClass.instantiate(listOf(StringGetter(builder.toString()))) to ExecutionResult.ContinueExecution
+        val array = arrayClass.instantiate(builder.toString().toMutableList())
+        return stringClass.instantiate(array) to ExecutionResult.ContinueExecution
     }
 }

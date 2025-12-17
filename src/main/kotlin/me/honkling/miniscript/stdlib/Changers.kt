@@ -13,6 +13,9 @@ import me.honkling.miniscript.parser.ast.string.ComplexString
 import kotlin.reflect.KClass
 
 fun registerChangers(environment: Environment) {
+    val stringClass = environment.stringClass
+    val arrayClass = environment.arrayClass
+
     environment.registerChanger<Boolean, Unit, Boolean>(LogicalNOT) { lhs, rhs, op ->
         !(lhs as Boolean)
     }
@@ -48,56 +51,57 @@ fun registerChangers(environment: Environment) {
         }
     }
 
-    val stringClass = environment.stringClass
-    environment.registerClassChanger<Double, String>(stringClass, Multiply) { lhs, rhs, op ->
+    environment.registerClassChanger<Double, ClassInstance>(stringClass, Multiply) { lhs, rhs, op ->
         val stringInstance = lhs as? ClassInstance ?: rhs as ClassInstance
         val double = rhs as? Double ?: lhs as Double
 
         if (double.mod(1.0) != 0.0)
             throw MiniScriptException.RuntimeError("Can't repeat a string a non-integer amount of times", null)
 
-        val string = (stringInstance.fields["value"] as List<Char>).joinToString("")
-        string.repeat(double.toInt())
+        val string = ((stringInstance.fields["value"] as ClassInstance).fields["data"] as List<Char>).joinToString("")
+        stringClass.instantiate(arrayClass.instantiate(string.repeat(double.toInt())))
     }
 
     environment.registerClassChanger<Any, ClassInstance>(stringClass, Plus) { lhs, rhs, op ->
         val classInstance = lhs as? ClassInstance ?: rhs as ClassInstance
         val leftSideIsClass = classInstance == lhs
         val otherValue = if (leftSideIsClass) rhs else lhs
-        val stringValue = (classInstance.fields["value"] as List<Char>).joinToString("")
+        val stringValue = ((classInstance.fields["value"] as ClassInstance).fields["data"] as List<Char>).joinToString("")
         val otherString = if (otherValue is ClassInstance && otherValue.classRef == stringClass)
-            (otherValue.fields["value"] as List<Char>).joinToString("")
+            ((otherValue.fields["value"] as ClassInstance).fields["data"] as List<Char>).joinToString("")
         else otherValue.toString()
 
-        stringClass.instantiate(listOf(ComplexString.StringGetter(
-            if (leftSideIsClass) stringValue + otherString
-            else otherString + stringValue
-        )))
+        val charArray = arrayClass.instantiate((
+                if (leftSideIsClass) stringValue + otherString
+                else otherString + stringValue
+        ).toMutableList())
+        stringClass.instantiate(charArray)
     }
 
-    environment.registerChanger<ArrayList<*>, ArrayList<*>, MutableList<*>>(Plus, Minus) { lhs, rhs, op ->
-        lhs as ArrayList<*>
-        rhs as ArrayList<*>
+    environment.registerClassChanger<ClassInstance>(arrayClass, arrayClass, Plus, Minus) { lhs, rhs, op ->
+        val leftArray = lhs.fields["data"] as MutableList<Any>
+        val rightArray = rhs.fields["data"] as MutableList<Any>
 
         if (op == Plus)
-            mutableListOf(*lhs.toTypedArray(), *rhs.toTypedArray())
+            arrayClass.instantiate(mutableListOf(*leftArray.toTypedArray(), *rightArray.toTypedArray()))
         else {
-            val clone = mutableListOf(*lhs.toTypedArray())
-            clone.removeAll(rhs)
-            clone
+            val clone = mutableListOf(*leftArray.toTypedArray())
+            clone.removeAll(rightArray)
+            arrayClass.instantiate(clone)
         }
     }
 
-    environment.registerChanger<ArrayList<*>, Any?, MutableList<*>>(Plus, Minus, priority = -10) { lhs, rhs, op ->
-        val array = lhs as? ArrayList<*> ?: rhs as ArrayList<*>
+    environment.registerClassChanger<Any?, ClassInstance>(arrayClass, Plus, Minus, priority = -10) { lhs, rhs, op ->
+        val array = lhs as? ClassInstance ?: rhs as ClassInstance
         val other = if (array === lhs) rhs else lhs
+        val data = array.fields["data"] as MutableList<*>
 
-        val clone = mutableListOf<Any?>(*array.toTypedArray())
+        val clone = mutableListOf(*data.toTypedArray())
         if (op == Plus)
             clone += other
         else clone -= other
 
-        clone
+        arrayClass.instantiate(clone)
     }
 
     environment.registerChanger<LinkedHashMap<*, *>, Any?, Any?>(Period) { lhs, rhs, op ->
@@ -105,14 +109,16 @@ fun registerChangers(environment: Environment) {
         lhs[rhs]
     }
 
-    environment.registerChanger<ArrayList<*>, Double, Any>(Period) { lhs, rhs, op ->
-        lhs as ArrayList<*>
+    environment.registerClassChanger<Double, Any>(arrayClass, Period) { lhs, rhs, op ->
+        lhs as ClassInstance
         rhs as Double
+
+        val data = lhs.fields["data"] as MutableList<*>
 
         if (rhs.mod(1.0) != 0.0)
             throw MiniScriptException.RuntimeError("Expected integer index for array", null)
 
-        lhs[rhs.toInt()]!!
+        data[rhs.toInt()]!!
     }
 
     environment.registerChanger<ClassInstance, Any?, Any?>(Period) { lhs, rhs, op ->
@@ -131,21 +137,34 @@ fun registerChangers(environment: Environment) {
     }
 }
 
-fun tryGetChangers(miniScript: MiniScript, leftClass: KClass<*>, rightClass: KClass<*>, op: Operator, tryVariant: Boolean = true): List<Changer<*>>? {
+fun tryGetChangers(
+    miniScript: MiniScript,
+    lhs: Any?,
+    rhs: Any?,
+    leftClass: KClass<*>,
+    rightClass: KClass<*>,
+    op: Operator,
+    tryVariant: Boolean = true
+): List<Changer<*>>? {
     val changers = miniScript.environment.changers
 
     changers[leftClass]?.get(rightClass)
         ?.sortedBy { it.priority }
-        ?.filter { op in it.validOperators }
+        ?.filter {
+            op in it.validOperators
+                    && (it.leftClass == null || (lhs is ClassInstance && it.leftClass == lhs.classRef))
+                    && (it.rightClass == null || (rhs is ClassInstance && it.rightClass == rhs.classRef))
+        }
+        ?.ifEmpty { null }
         ?.let { return it }
 
     if (tryVariant)
-        return tryGetChangers(miniScript, leftClass, Any::class, op, false)
-            ?: tryGetChangers(miniScript, Any::class, rightClass, op, false)
-            ?: tryGetChangers(miniScript, rightClass, Any::class, op, false)
-            ?: tryGetChangers(miniScript, rightClass, leftClass, op, false)
-            ?: tryGetChangers(miniScript, Any::class, leftClass, op, false)
-            ?: tryGetChangers(miniScript, Any::class, Any::class, op, false)
+        return tryGetChangers(miniScript, lhs, rhs, leftClass, Any::class, op, false)
+            ?: tryGetChangers(miniScript, lhs, rhs, Any::class, rightClass, op, false)
+            ?: tryGetChangers(miniScript, lhs, rhs, rightClass, leftClass, op, false)
+            ?: tryGetChangers(miniScript, lhs, rhs, rightClass, Any::class, op, false)
+            ?: tryGetChangers(miniScript, lhs, rhs, Any::class, leftClass, op, false)
+            ?: tryGetChangers(miniScript, lhs, rhs, Any::class, Any::class, op, false)
 
     return null
 }

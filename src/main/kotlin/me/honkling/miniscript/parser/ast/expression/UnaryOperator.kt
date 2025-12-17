@@ -22,7 +22,7 @@ class UnaryOperator(
             throw MiniScriptException.RuntimeError("Expected unary value", this)
 
         val miniScript = getBlockParent()!!.miniScript
-        val changers = tryGetChangers(miniScript, value::class, Unit::class, operator)
+        val changers = tryGetChangers(miniScript, value, Unit, value::class, Unit::class, operator)
             ?: throw MiniScriptException.RuntimeError("Invalid operator $operator for '$value'", this)
 
         for (changer in changers) {

@@ -79,7 +79,7 @@ class Arithmetic(
                 val value = value
                     ?: 1.0
 
-                val changers = tryGetChangers(miniScript, currentValue!!::class, value::class, operator)
+                val changers = tryGetChangers(miniScript, currentValue, value, currentValue::class, value::class, operator)
                     ?: throw MiniScriptException.RuntimeError("Couldn't find changer", this)
 
                 changers.firstNotNullOfOrNull {
@@ -115,7 +115,7 @@ fun evaluateArithmetic(miniScript: MiniScript, node: Arithmetic, left: Any?, rig
     val leftClass = left?.let { it::class } ?: Any::class
     val rightClass = right?.let { it::class } ?: Any::class
 
-    val changers = tryGetChangers(miniScript, leftClass, rightClass, operator)
+    val changers = tryGetChangers(miniScript, left, right, leftClass, rightClass, operator)
         ?: throw MiniScriptException.RuntimeError("Invalid operator $operator for '$left' and '$right'", node)
 
     for (changer in changers) {

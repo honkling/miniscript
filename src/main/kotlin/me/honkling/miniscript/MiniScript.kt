@@ -10,6 +10,7 @@ import me.honkling.miniscript.lexer.TokenType
 import me.honkling.miniscript.parser.Parser
 import me.honkling.miniscript.parser.ast.Operator
 import me.honkling.miniscript.parser.ast.SymbolTable
+import me.honkling.miniscript.parser.ast.prototype.Class
 import me.honkling.miniscript.parser.ast.stack.Environment
 import me.honkling.miniscript.stdlib.*
 import java.io.File
@@ -19,6 +20,8 @@ typealias ChangerBlock<F, S, R> = (lhs: F, rhs: S, op: Operator) -> R
 data class Changer<R>(
     val validOperators: Set<Operator>,
     val priority: Int,
+    val leftClass: Class?,
+    val rightClass: Class?,
     val block: ChangerBlock<Any?, Any?, R>
 )
 
@@ -30,7 +33,8 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
     init {
         if (hasStandardLibrary) {
 //            evaluateResource("stdlib/files.mini")
-            evaluateResource("stdlib/arrays.mini", ::registerStdlibArrays)
+//            evaluateResource("stdlib/arrays.mini", ::registerStdlibArrays)
+            registerStdlibArrays(environment)
             evaluateResource("stdlib/strings.mini")
             evaluateResource("stdlib/logging.mini", ::registerStdlibLogging)
             evaluateResource("stdlib/loops.mini", ::registerStdlibLoops)

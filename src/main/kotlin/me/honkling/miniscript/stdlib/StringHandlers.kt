@@ -8,15 +8,15 @@ import me.honkling.miniscript.parser.ast.stack.Environment
 fun registerStringHandlers(environment: Environment) {
     environment.registerStringHandler<ClassInstance> { value ->
         val toString = value.classRef.methods.find {
-            val returnsString = it.returnType is Type.Class && it.returnType.reference.get() == environment.stringClass
+            val returnsString = it.returnType is Type.Class && it.returnType.reference.get().first == environment.stringClass
             it.name == "to_string" && it.parameters.isEmpty() && returnsString
         }
 
         if (value.classRef == environment.stringClass)
-            (value.fields["value"] as List<Char>).joinToString("")
+            ((value.fields["value"] as ClassInstance).fields["data"] as List<Char>).joinToString("")
         else if (toString != null) {
-            val stringInstance = toString.call()
-            (value.fields["value"] as List<Char>).joinToString("")
+            val stringInstance = toString.call(symbols = mapOf("this" to value)) as ClassInstance
+            ((stringInstance.fields["value"] as ClassInstance).fields["data"] as List<Char>).joinToString("")
         } else {
             val fields = environment.stringifyValue(value.fields)
             "${value.classRef.name}$fields"
