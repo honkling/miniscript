@@ -7,6 +7,7 @@ import me.honkling.miniscript.parser.ast.Type
 import me.honkling.miniscript.parser.ast.Value
 import me.honkling.miniscript.parser.ast.function.Function
 import me.honkling.miniscript.parser.ast.prototype.Class
+import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.parser.ast.prototype.FunctionReference
 import me.honkling.miniscript.parser.ast.statement.ExecutionResult
 import me.honkling.miniscript.pass.Pass
@@ -36,12 +37,34 @@ class FunctionCall(
                 continue
 
             if (parameter.isVararg) {
+                val varargArguments = mutableListOf<Any>()
                 val rest = this.arguments.slice(index..<this.arguments.size)
-                arguments += rest.map { it.get().first }
+
+                for (argument in rest) {
+                    val (value, result) = argument.get()
+
+                    if (result != ExecutionResult.ContinueExecution)
+                        return value to result
+
+                    if (value == null)
+                        throw MiniScriptException.RuntimeError("Expected argument value, found nothing", this)
+
+                    if (argument is Value.Spread)
+                        varargArguments.addAll((value as ClassInstance).fields["data"] as List<Any>)
+                    else varargArguments += value
+                }
+
+                val arrayClass = getBlockParent()!!.miniScript.environment.arrayClass
+                arguments += arrayClass.instantiate(varargArguments)
                 break
             }
 
-            arguments += this.arguments[index].get().first
+            val argument = this.arguments[index]
+
+            if (argument is Value.Spread)
+                throw MiniScriptException.RuntimeError("Cannot spread list for a non-vararg parameter.", this)
+
+            arguments += argument.get().first
                 ?: throw MiniScriptException.RuntimeError("Expected argument value, found nothing", this)
         }
 

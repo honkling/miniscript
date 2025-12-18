@@ -313,7 +313,7 @@ class Parser(
                     initializer = parseBlock(null)
                 }
                 TokenType.Identifier -> fields += parseField(null)
-                TokenType.Function -> methods += parseFunction(null)
+                TokenType.Function, TokenType.Native -> methods += parseFunction(null)
                 else -> {
                     logger.error("Expected a field, method, or '}', found ${token.asString()}")
                     throw MiniScriptException.ParseError()
@@ -369,6 +369,17 @@ class Parser(
         stream.consume().expect(TokenType.OpenParen)
 
         while (stream.peek().type != TokenType.CloseParen) {
+            if (stream.peek().type == TokenType.Spread) {
+                val start = logger.location.clone()
+                stream.consume()
+
+                val expression = parseExpression(null)
+                val spread = Value.Spread(expression, start, null)
+                expression.parent = spread
+                arguments += spread
+                continue
+            }
+
             arguments += parseExpression(null)
 
             if (stream.peek().type != TokenType.CloseParen)
@@ -693,6 +704,7 @@ class Parser(
             TokenType.DictType -> Type.Dictionary
             TokenType.VoidType -> Type.Void
             TokenType.AnyType -> Type.Any
+            TokenType.ByteType -> Type.Byte
             TokenType.Identifier -> {
                 stream.merge(branch)
                 val expression = parseExpression(null, true)

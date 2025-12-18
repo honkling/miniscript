@@ -1,1 +1,2 @@
-print(fileSystem.a())
+file = get_file("rosie.txt")
+print(file.read_bytes())

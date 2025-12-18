@@ -32,13 +32,12 @@ class MiniScript internal constructor(configuration: MiniScriptConfiguration) {
 
     init {
         if (hasStandardLibrary) {
-//            evaluateResource("stdlib/files.mini")
-//            evaluateResource("stdlib/arrays.mini", ::registerStdlibArrays)
             registerStdlibArrays(environment)
             evaluateResource("stdlib/strings.mini")
             evaluateResource("stdlib/logging.mini", ::registerStdlibLogging)
             evaluateResource("stdlib/loops.mini", ::registerStdlibLoops)
             evaluateResource("stdlib/locale.mini", ::registerStdlibLocale)
+            evaluateResource("stdlib/files.mini", ::registerStdlibFiles)
             environment.resolveReferences()
 
             registerChangers(environment)

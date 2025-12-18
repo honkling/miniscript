@@ -17,8 +17,12 @@ abstract class Node<T>(
     fun getBlockParent(): Block?
         = (parent as? Block) ?: (parent as Node<*>?)?.getBlockParent()
 
+    fun getEnvironment(): Environment
+        = getBlockParent()?.miniScript?.environment ?: parent as? Environment
+            ?: this as Environment
+
     fun getSymbol(name: String): Any? {
-        val environment = if (this is Environment) this else getBlockParent()!!.miniScript.environment
+        val environment = getEnvironment()
 
         for (index in environment.executionStack.size - 1 downTo 0) {
             val frame = environment.executionStack[index]

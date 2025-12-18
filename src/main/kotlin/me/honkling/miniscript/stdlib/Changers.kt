@@ -21,8 +21,8 @@ fun registerChangers(environment: Environment) {
     }
 
     environment.registerChanger<Any, Any, Boolean>(Equals, NotEquals) { lhs, rhs, op ->
-        if (op == Equals) lhs == rhs
-        else lhs != rhs
+        if (op == Equals) environment.areValuesEqual(lhs, rhs)
+        else !environment.areValuesEqual(lhs, rhs)
     }
 
     environment.registerChanger<Double, Double, Double>(Plus, Minus, Multiply, Divide) { lhs, rhs, op ->

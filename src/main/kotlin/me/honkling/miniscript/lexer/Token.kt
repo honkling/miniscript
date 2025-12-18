@@ -64,6 +64,7 @@ enum class TokenType(val value: String? = null) {
     CharType("char"),
     NumberType("number"),
     BooleanType("boolean"),
+    ByteType("byte"),
     DictType("dict"),
     VoidType("void"),
     AnyType("any"),

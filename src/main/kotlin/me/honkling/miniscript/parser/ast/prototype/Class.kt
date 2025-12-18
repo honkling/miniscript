@@ -35,6 +35,7 @@ class Class(
     }
 
     fun instantiate(vararg arguments: Any): ClassInstance {
+        val environment = getEnvironment()
         val instance = superClass?.instantiate(superArgs)
             ?: ClassInstance(this)
 
@@ -47,8 +48,18 @@ class Class(
             instance.fields[field.name] = value
         }
 
-        for ((index, parameter) in constructorParameters.withIndex())
-            instance.fields[parameter.name] = arguments[index]
+        for ((index, parameter) in constructorParameters.withIndex()) {
+            val rawValue = arguments[index]
+            val value = when (rawValue) {
+                is String -> environment.stringClass.instantiate(environment.arrayClass.instantiate(
+                    rawValue.toMutableList()))
+                is Iterable<*> -> if (this == environment.arrayClass) rawValue
+                    else environment.arrayClass.instantiate(rawValue)
+                else -> rawValue
+            }
+
+            instance.fields[parameter.name] = value
+        }
 
         if (initializer != null) {
             val frame = initializer.pushToStack()

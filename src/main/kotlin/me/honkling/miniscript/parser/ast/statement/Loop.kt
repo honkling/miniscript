@@ -4,6 +4,7 @@ import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.diagnostic.MiniScriptException
 import me.honkling.miniscript.parser.ast.Block
 import me.honkling.miniscript.parser.ast.expression.Expression
+import me.honkling.miniscript.parser.ast.prototype.ClassInstance
 import me.honkling.miniscript.pass.Pass
 
 abstract class Loop(val block: Block, location: Location, parent: Block) : Statement(location, parent) {
@@ -17,10 +18,10 @@ abstract class Loop(val block: Block, location: Location, parent: Block) : State
         override fun execute(): ExecutionResult {
             val values = expression.get().first
 
-            if (values !is Iterable<*>)
+            if (values !is ClassInstance || values.classRef != getBlockParent()!!.miniScript.environment.arrayClass)
                 throw MiniScriptException.RuntimeError("Expected an iterable value", this)
 
-            for (value in values) {
+            for (value in values.fields["data"] as List<*>) {
                 val frame = block.pushToStack()
                 frame.symbolTable[identifier] = value
                 val result = block.execute(false).second

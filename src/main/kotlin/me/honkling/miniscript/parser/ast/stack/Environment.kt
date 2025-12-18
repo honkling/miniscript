@@ -90,6 +90,25 @@ class Environment(val miniScript: MiniScript) : Node<Nothing?>(null, null) {
         return stringHandler.invoke(value)
     }
 
+    fun areValuesEqual(lhs: Any?, rhs: Any?): Boolean {
+        if (lhs is ClassInstance && rhs is ClassInstance)
+            return when {
+                lhs.classRef == arrayClass && rhs.classRef == arrayClass -> {
+                    val lhsValues = lhs.fields["data"] as List<*>
+                    val rhsValues = rhs.fields["data"] as List<*>
+
+                    lhsValues.size == rhsValues.size && lhsValues.withIndex().all { (index, it) -> areValuesEqual(it, rhsValues[index]) }
+                }
+                else -> {
+                    if (lhs.classRef != rhs.classRef || lhs.fields.size != rhs.fields.size)
+                        false
+                    else lhs.fields.entries.all { (key, it) -> areValuesEqual(it, rhs.fields[key]) }
+                }
+            }
+
+        return lhs == rhs
+    }
+
     override fun accept(pass: Pass) {
         pass.visitEnvironment(this)
     }

@@ -12,6 +12,12 @@ fun nativeBlock(miniScript: MiniScript, function: Function, runnable: NativeStat
     return block
 }
 
+fun Function.nativeBlock(runnable: NativeStatement.() -> Unit) {
+    val miniScript = getBlockParent()!!.miniScript
+    val block = nativeBlock(miniScript, this, runnable)
+    this.block = block
+}
+
 class NativeStatement(val block: NativeStatement.() -> Unit, parent: Block) : Statement(null, parent) {
     override fun execute(): ExecutionResult {
         block(this)

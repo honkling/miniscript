@@ -1,12 +1,15 @@
 package me.honkling.miniscript.parser.ast
 
+import me.honkling.miniscript.diagnostic.Location
 import me.honkling.miniscript.parser.ast.expression.Expression
 import me.honkling.miniscript.parser.ast.function.Parameter
 import me.honkling.miniscript.pass.Pass
+import me.honkling.miniscript.stdlib.builder.emptyLocation
 import me.honkling.miniscript.parser.ast.function.Function as MSFunction
 import me.honkling.miniscript.parser.ast.prototype.Class as MSClass
 
 abstract class Type<T>(parent: Node<*>? = null) : Node<Node<*>?>(null, parent) {
+    object Byte : Type<kotlin.Byte>()
     object Char : Type<kotlin.Char>()
     object Number : Type<kotlin.Number>()
     object Boolean : Type<kotlin.Boolean>()
@@ -18,7 +21,14 @@ abstract class Type<T>(parent: Node<*>? = null) : Node<Node<*>?>(null, parent) {
     class Function(
         val parameters: List<Parameter>,
         val returnType: Type<*>
-    ) : Type<MSFunction>()
+    ) : Type<MSFunction>() {
+        constructor(returnType: Type<*>, vararg parameters: Pair<String, Type<*>>) : this(
+            parameters.map { Parameter(it.first, it.second, null, false, emptyLocation, null) },
+            returnType
+        ) {
+            this.parameters.forEach { it.parent = this }
+        }
+    }
 
     override fun accept(pass: Pass) {
         pass.visitType(this)

@@ -1,13 +1,20 @@
 class File(path: string) {
-
+    native func get_absolute() -> File
+    native func exists() -> boolean
+    native func is_directory() -> boolean
+    native func list_files(recursive: boolean = false) -> File[]
+    native func write_bytes(bytes: byte[])
+    native func write_text(text: String)
+    native func read_bytes() -> byte[]
+    native func read_text() -> String
 }
 
-func file(...paths: string) -> File {
+func get_file(...paths: string) -> File {
     joined_path = join_paths(...paths)
     return File(joined_path)
 }
 
-func join_paths(...paths: string) -> string {
+func join_paths(...paths: string) -> String {
     segments = []
 
     foreach (path : paths) {
@@ -15,8 +22,11 @@ func join_paths(...paths: string) -> string {
             .split("/")
 
         foreach (segment : current_segments) {
+            if (segment == "")
+                continue
+
             if (segment == "..") {
-                segments.pop()
+                segments.remove_last()
                 continue
             }
 
